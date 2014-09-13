@@ -1,13 +1,14 @@
 module Main where
 
 import           Control.Applicative ((<$>))
-import           Control.Monad       (void)
+import           Control.Monad       (void, when)
 import           Data.Configurator
 import           Data.Monoid
 import qualified Data.Text           as T
 import           Development.Shake
 import           Prelude             hiding ((++))
-import           System.Directory
+import           System.Directory    (createDirectoryIfMissing,
+                                      getCurrentDirectory)
 import           System.Process
 
 
@@ -37,23 +38,24 @@ main = do
      sequence_ (map (\d ->
        do let (repo':rest) = T.splitOn (T.pack "+") d
           let (repo:branchspec) = T.splitOn (T.pack ":") repo'
-          ("deps/" ++ (T.unpack repo) ++ ".d") *> \depdir ->
-            do cmd ("git clone https://github.com/"
-                    ++ (T.unpack repo) ++ " " ++ depdir) :: Action ()
-               case branchspec of
-                 (branch:_) -> cmd (Cwd depdir) ("git checkout " ++ (T.unpack branch))
-                 _ -> return ()
-               case rest of
-                 (subdirs:_) -> mapM_ (\subdir -> cmd ("cabal sandbox add-source " ++ depdir
-                                                        ++ "/" ++ (T.unpack subdir)) :: Action ())
-                                      (T.splitOn (T.pack ",") subdirs)
-                 _ -> cmd ("cabal sandbox add-source " ++ depdir))
+          ("deps/" ++ (T.unpack repo) ++ ".d") *> \depdir -> do
+              shouldClone <- (not <$> doesDirectoryExist depdir)
+              () <- when shouldClone $ cmd ("git clone https://github.com/"
+                                            ++ (T.unpack repo) ++ " " ++ depdir)
+              () <- cmd (Cwd depdir) "git pull"
+              case branchspec of
+                (branch:_) -> cmd (Cwd depdir) ("git checkout " ++ (T.unpack branch))
+                _ -> return ()
+              case rest of
+                (subdirs:_) -> mapM_ (\subdir -> cmd ("cabal sandbox add-source " ++ depdir
+                                                       ++ "/" ++ (T.unpack subdir)) :: Action ())
+                                     (T.splitOn (T.pack ",") subdirs)
+                _ -> cmd ("cabal sandbox add-source " ++ depdir))
         deps)
      let binary = "./.cabal-sandbox/bin/" ++ proj
      binary *> \_ -> do files <- getDirectoryFiles "" ["src//*.hs", "*.cabal"]
-                        liftIO $ print files
                         need files
-                        cmd "cabal install -fdevelopment --reorder-goals"
+                        cmd "cabal install -fdevelopment --reorder-goals --force-reinstalls"
      "run" ~> do need [binary]
                  exec binary
      "test" ~> exec "cabal exec -- runghc -isrc spec/Main.hs"
@@ -69,4 +71,5 @@ main = do
                   need ["update"]
                   exec "cabal exec -- ghc-pkg expose hspec2"
                   exec "cabal exec -- ghc-pkg expose hspec-snap"
-     "update" ~> exec "cabal install --only-dependencies --enable-tests"
+                  exec "cabal exec -- ghc-pkg hide resource-pool"
+     "update" ~> exec "cabal install -fdevelopment --only-dependencies --enable-tests --reorder-goals --force-reinstalls"
