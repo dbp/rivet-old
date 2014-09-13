@@ -66,3 +66,7 @@ main = do
      "init" ~> do need ["cabal.sandbox.config"]
                   liftIO $ createDirectoryIfMissing False "deps"
                   need depDirs
+                  need ["update"]
+                  exec "cabal exec -- ghc-pkg expose hspec2"
+                  exec "cabal exec -- ghc-pkg expose hspec-snap"
+     "update" ~> exec "cabal install --only-dependencies --enable-tests"
