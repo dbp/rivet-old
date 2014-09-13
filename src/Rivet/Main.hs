@@ -25,13 +25,15 @@ main = do
   conf <- load [Optional "Rivetfile"]
   shakeArgs opts $ do
      let binary = "./.cabal-sandbox/bin/" ++ proj
-     "test" ~> exec "cabal exec -- runghc -isrc spec/Main.hs"
      binary *> \_ -> do files <- getDirectoryFiles "" ["src//*.hs", "*.cabal"]
                         liftIO $ print files
                         need files
                         cmd "cabal install -fdevelopment --reorder-goals"
      "run" ~> do need [binary]
                  exec binary
+     "test" ~> exec "cabal exec -- runghc -isrc spec/Main.hs"
      "db" ~> do pass <- liftIO $ require conf (T.pack "database-password")
-                let c = "PGPASSWORD=" ++ pass ++ " psql " ++ proj ++ "_devel -U" ++ proj ++ "_user" ++ " -hlocalhost"
+                let c = "PGPASSWORD=" ++ pass ++ " psql " ++ proj
+                        ++ "_devel -U" ++ proj ++ "_user" ++ " -hlocalhost"
                 exec c
+     "repl" ~> exec "cabal repl"
