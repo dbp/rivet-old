@@ -94,7 +94,7 @@ main = do
                     liftIO $ writeFile ("migrations/" ++ str) migrationTemplate
      "deps/dbp/migrate.d/.cabal-sandbox/bin/migrate" *> \_ ->
           do need ["deps/dbp/migrate.d"]
-             cmd (Cwd "deps/dbp/migrate.d") "cabal sandbox init"
+             () <- cmd (Cwd "deps/dbp/migrate.d") "cabal sandbox init"
              cmd (Cwd "deps/dbp/migrate.d") "cabal install"
      "db:migrate" ~> do need ["deps/dbp/migrate.d/.cabal-sandbox/bin/migrate"]
                         void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate up"
