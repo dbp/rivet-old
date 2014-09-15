@@ -33,8 +33,11 @@ We assume that your tests can all be run by running `spec/Main.hs`.
 ## Rivetfile
 
 These are the current settings you can put in the file. None are
-required to run `rivet`, but some tasks may fail without the proper
-setting.
+required to run `rivet`, but **you must have a Rivetfile** in the
+project root. This is primarily a safety feature, as right now there
+is essentially no checking, and if you weren't at the project root,
+some commands might do very unexpected things (see assumptions about
+the project name above).
 
 `database-password = "password"`
 
@@ -54,12 +57,19 @@ contain multiple projects within it.
 
 The current list of supported tasks are:
 
-`init` - sets up the project, pull in (and building) all the
-         dependencies. Note that you can re-run this if you change
-         dependencies, etc.
+`setup` - sets up the project, pull in (and building) all the
+    dependencies. Note that you can re-run this if you change
+    dependencies, etc.
 
 `run` - build and run the development version of the application. Only
-        rebuilds if `.hs` files in `src/` have changed.
+    rebuilds if `.hs` files in `src/` have changed.
+
+`run:docker` - builds and runs the application using Docker. You need
+    to rerun this when you make changes, it does not do automatic
+    reloading (yet). In order to do this, you need Docker installed,
+    but do not need ghc (or postgresql). Also, currently the
+    boot2docker setup for macosx can't support this, as we need to
+    mount volumes into the container (to persist data in the database).
 
 `update` - builds and installs all needed dependencies (including
            those needed for tests).
@@ -69,3 +79,12 @@ The current list of supported tasks are:
 `repl` - start a repl for project.
 
 `db` - connect to development database.
+
+`db:create` - Creates needed databases and database user (NOT FINISHED).
+
+`db:new` - create a new migration in the `migrations` directory, using
+           the `migrate` utility (unreleased, on github at dbp/migrate)
+
+`db:migrate` - Runs migration against development database (NOT FINISHED).
+
+`db:migrate:docker` - Runs migrations against development setup in docker (NOT FINISHED).
