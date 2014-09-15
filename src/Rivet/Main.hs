@@ -64,7 +64,7 @@ main = do
      "run:docker" ~> do exec "ln -sf docker/Dockerfile.development Dockerfile"
                         exec $ "sudo docker build -t " ++ proj ++ "_devel ."
                         exec "rm Dockerfile"
-                        void $ exec $ "sudo docker run -w /srv -p 8000:8000 -i -t -v $PWD/data:/var/lib/postgresql " ++ proj ++ "_devel"
+                        void $ exec $ "sudo docker run -w /srv -p 8000:8000 -i -t -v $PWD/docker/data:/var/lib/postgresql " ++ proj ++ "_devel"
      "test" ~> void (exec "cabal exec -- runghc -isrc spec/Main.hs")
      "db" ~> do pass <- liftIO $ require conf (T.pack "database-password")
                 let c = "PGPASSWORD=" ++ pass ++ " psql " ++ proj
@@ -102,7 +102,7 @@ main = do
      "db:migrate:docker" ~> do exec "ln -sf docker/Dockerfile.migrate Dockerfile"
                                exec $ "sudo docker build -t " ++ proj ++ "_migrate ."
                                exec "rm Dockerfile"
-                               void $ exec $ "sudo docker run -w /srv -i -t -v $PWD/data:/var/lib/postgresql " ++ proj ++ "_migrate"
+                               void $ exec $ "sudo docker run -w /srv -i -t -v $PWD/docker/data:/var/lib/postgresql " ++ proj ++ "_migrate"
      "repl" ~> void (exec "cabal repl")
      "cabal.sandbox.config" *> \_ -> cmd "cabal sandbox init"
      "setup" ~> do need ["cabal.sandbox.config"]
