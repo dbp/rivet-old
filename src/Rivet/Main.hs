@@ -73,19 +73,19 @@ main = do
      "db:create" ~> do pass <- liftIO $ require conf (T.pack "database-password")
                        code <- exec $ "PGPASSWORD=" ++ pass ++ " psql -U" ++ proj ++ "_user template1 -c 'SELECT 1'"
                        isSuper <- case code of
-                                    ExitFailure _ -> do void $ exec $ "sudo -u postgres psql template1 -c 'CREATE USER " ++ proj ++ "_user WITH SUPERUSER PASSWORD '" ++ pass ++ "'"
+                                    ExitFailure _ -> do void $ exec $ "sudo -u postgres psql template1 -c \"CREATE USER " ++ proj ++ "_user WITH SUPERUSER PASSWORD '" ++ pass ++ "'\""
                                                         return True
-                                    ExitSuccess -> do res <- liftIO $ readProcess "psql" ["-U" ++ proj ++ "_user", "template1", "-c", "'SELECT current_setting('is_superuser')'"] []
+                                    ExitSuccess -> do res <- liftIO $ readProcess "psql" ["-U" ++ proj ++ "_user", "template1", "-c", "\"SELECT current_setting('is_superuser')\""] []
                                                       return ("on" `isInfixOf` res)
 
                        if isSuper
-                          then do exec $ "PGPASSWORD=" ++ pass ++ " psql -U" ++ proj ++ "_user template1 -c 'CREATE DATABASE " ++ proj ++ "_devel'"
-                                  exec $ "PGPASSWORD=" ++ pass ++ " psql -U" ++ proj ++ "_user template1 -c 'CREATE DATABASE " ++ proj ++ "_test'"
+                          then do exec $ "PGPASSWORD=" ++ pass ++ " psql -U" ++ proj ++ "_user template1 -c \"CREATE DATABASE " ++ proj ++ "_devel\""
+                                  exec $ "PGPASSWORD=" ++ pass ++ " psql -U" ++ proj ++ "_user template1 -c \"CREATE DATABASE " ++ proj ++ "_test\""
                                   return ()
-                          else do void $ exec $ "sudo -u postgres psql template1 -c 'CREATE DATABASE " ++ proj ++ "_devel'"
-                                  void $ exec $ "sudo -u postgres psql template1 -c 'CREATE DATABASE " ++ proj ++ "_test'"
-                                  void $ exec $ "sudo -u postgres psql template1 -c 'GRANT ALL ON DATABASE " ++ proj ++ "_devel TO " ++ proj ++ "_user'"
-                                  void $ exec $ "sudo -u postgres psql template1 -c 'GRANT ALL ON DATABASE " ++ proj ++ "_test TO " ++ proj ++ "_user'"
+                          else do void $ exec $ "sudo -u postgres psql template1 -c \"CREATE DATABASE " ++ proj ++ "_devel\""
+                                  void $ exec $ "sudo -u postgres psql template1 -c \"CREATE DATABASE " ++ proj ++ "_test\""
+                                  void $ exec $ "sudo -u postgres psql template1 -c \"GRANT ALL ON DATABASE " ++ proj ++ "_devel TO " ++ proj ++ "_user\""
+                                  void $ exec $ "sudo -u postgres psql template1 -c \"GRANT ALL ON DATABASE " ++ proj ++ "_test TO " ++ proj ++ "_user\""
      "db:new" ~> do liftIO $ putStrLn "Migration name (no spaces, lowercase): "
                     name <- liftIO getLine
                     now <- liftIO getCurrentTime
@@ -97,7 +97,8 @@ main = do
              () <- cmd (Cwd "deps/dbp/migrate.d") "cabal sandbox init"
              cmd (Cwd "deps/dbp/migrate.d") "cabal install"
      "db:migrate" ~> do need ["deps/dbp/migrate.d/.cabal-sandbox/bin/migrate"]
-                        void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate up"
+                        void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate up devel"
+                        void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate up test"
      "db:migrate:docker" ~> do exec "ln -sf docker/Dockerfile.migrate Dockerfile"
                                exec $ "sudo docker build -t " ++ proj ++ "_migrate ."
                                exec "rm Dockerfile"
@@ -119,6 +120,7 @@ migrationTemplate = unlines ["{-# LANGUAGE OverloadedStrings #-}"
                             ,""
                             ,"import Control.Monad"
                             ,"import Database.Migrate"
+                            ,"import Site"
                             ,""
                             ,"main = runMainSnap app $ do"
                             ,"  upSql runUp"

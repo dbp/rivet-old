@@ -72,7 +72,7 @@ The current list of supported tasks are:
     mount volumes into the container (to persist data in the database).
 
 `update` - builds and installs all needed dependencies (including
-           those needed for tests).
+    those needed for tests).
 
 `test` - run tests.
 
@@ -80,11 +80,17 @@ The current list of supported tasks are:
 
 `db` - connect to development database.
 
-`db:create` - Creates needed databases and database user (NOT FINISHED).
+`db:create` - Creates projname_devel and projname_test databases, and
+    projname_user user (the latter is only created if needed). If the user
+    does not already exist, or isn't a superuser, commands are run via sudo
+    to the postgres user, so you may be prompted for your password (depending
+    on how you have sudo set up).
 
 `db:new` - create a new migration in the `migrations` directory, using
-           the `migrate` utility (unreleased, on github at dbp/migrate)
+    the `migrate` utility (unreleased, on github at dbp/migrate)
 
-`db:migrate` - Runs migration against development database (NOT FINISHED).
+`db:migrate` - Runs migration against devel and test databases. The migrations
+    are run via the `migrate` utility (see `db:new`).
 
-`db:migrate:docker` - Runs migrations against development setup in docker (NOT FINISHED).
+`db:migrate:docker` - Runs migrations against devel/test databases in
+    docker development environment.
