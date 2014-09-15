@@ -53,6 +53,20 @@ present, they will what will be added as sources to the cabal
 sandbox. This is to support the pattern where one repository will
 contain multiple projects within it.
 
+```
+commands {
+  foo = "bar"
+  foo1 = "bar2"
+```
+
+Defines new commands `foo` and `foo1`, where `bar` and `bar2` are
+expected to be shell commands (possibly the path to a shell script,
+etc). Currently, due to configurator, you can't use colons in the
+command names (see pull request
+[here](https://github.com/bos/configurator/pull/18)). This is particularly
+useful in moving legacy applications over to using `rivet` (where they may
+have various ad-hoc Makefile commands).
+
 ## Tasks
 
 The current list of supported tasks are:
@@ -62,7 +76,7 @@ The current list of supported tasks are:
     dependencies, etc.
 
 `run` - build and run the development version of the application. Only
-    rebuilds if `.hs` files in `src/` have changed.
+    rebuilds if `Main.hs` file in `src/` or the `.cabal` file has changed.
 
 `run:docker` - builds and runs the application using Docker in development
     mode, so it automatically recompiles/reloads on the fly. You should only

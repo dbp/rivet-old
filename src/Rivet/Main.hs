@@ -1,17 +1,19 @@
 module Main where
 
-import           Control.Applicative ((<$>))
-import           Control.Monad       (void, when)
+import           Control.Applicative     ((<$>))
+import           Control.Monad           (void, when)
 import           Data.Configurator
-import           Data.List           (isInfixOf)
+import           Data.Configurator.Types
+import qualified Data.HashMap.Strict     as M
+import           Data.List               (isInfixOf)
 import           Data.Monoid
-import qualified Data.Text           as T
+import qualified Data.Text               as T
 import           Data.Time.Clock
 import           Data.Time.Format
 import           Development.Shake
-import           Prelude             hiding ((++))
-import           System.Directory    (createDirectoryIfMissing,
-                                      getCurrentDirectory)
+import           Prelude                 hiding ((++))
+import           System.Directory        (createDirectoryIfMissing,
+                                          getCurrentDirectory)
 import           System.Exit
 import           System.Process
 
@@ -34,10 +36,15 @@ main :: IO ()
 main = do
   proj <- getProjectName
   conf <- load [Required "Rivetfile"]
+  commands <- (map (\(k,String v) -> (T.drop (length "commands.") k, v)) .
+               filter (\(k,v) -> (T.pack "commands.") `T.isPrefixOf` k) .
+               M.toList) <$> getMap conf
   deps <- lookupDefault [] conf (T.pack "dependencies")
   let depDirs = map ((++ ".d") . ("deps/" ++) . T.unpack . head .
                      T.splitOn (T.pack ":") . head . T.splitOn (T.pack "+")) deps
   shakeArgs opts $ do
+     sequence_ (map (\(cName, cCom) -> (T.unpack cName) ~> void (exec (T.unpack cCom)))
+                    commands)
      sequence_ (map (\d ->
        do let (repo':rest) = T.splitOn (T.pack "+") d
           let (repo:branchspec) = T.splitOn (T.pack ":") repo'
@@ -58,7 +65,7 @@ main = do
                 _ -> addSource depdir)
         deps)
      let binary = "./.cabal-sandbox/bin/" ++ proj
-     binary *> \_ -> do files <- getDirectoryFiles "" ["src//*.hs", "*.cabal"]
+     binary *> \_ -> do files <- getDirectoryFiles "" ["src/Main.hs", "*.cabal"]
                         need files
                         cmd "cabal install -fdevelopment --reorder-goals --force-reinstalls"
      "run" ~> do need [binary]

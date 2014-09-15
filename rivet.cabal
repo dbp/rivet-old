@@ -27,5 +27,6 @@ executable rivet
                      , text
                      , process
                      , time >= 1.5 && < 1.6
+                     , unordered-containers
   hs-source-dirs:      src
   default-language:    Haskell2010
