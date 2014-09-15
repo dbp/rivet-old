@@ -49,11 +49,13 @@ main = do
               case branchspec of
                 (branch:_) -> cmd (Cwd depdir) ("git checkout " ++ (T.unpack branch))
                 _ -> return ()
+              let addSource s = do let str = "cabal sandbox add-source " ++ s
+                                   liftIO $ appendFile "deps/add-all" (str ++ "\n")
+                                   cmd str :: Action ()
               case rest of
-                (subdirs:_) -> mapM_ (\subdir -> cmd ("cabal sandbox add-source " ++ depdir
-                                                       ++ "/" ++ (T.unpack subdir)) :: Action ())
+                (subdirs:_) -> mapM_ (\subdir -> addSource (depdir ++ "/" ++ (T.unpack subdir)))
                                      (T.splitOn (T.pack ",") subdirs)
-                _ -> cmd ("cabal sandbox add-source " ++ depdir))
+                _ -> addSource depdir)
         deps)
      let binary = "./.cabal-sandbox/bin/" ++ proj
      binary *> \_ -> do files <- getDirectoryFiles "" ["src//*.hs", "*.cabal"]
@@ -64,7 +66,7 @@ main = do
      "run:docker" ~> do exec "ln -sf docker/Dockerfile.development Dockerfile"
                         exec $ "sudo docker build -t " ++ proj ++ "_devel ."
                         exec "rm Dockerfile"
-                        void $ exec $ "sudo docker run -w /srv -p 8000:8000 -i -t -v $PWD/docker/data:/var/lib/postgresql " ++ proj ++ "_devel"
+                        void $ exec $ "sudo docker run -w /srv -p 8000:8000 -i -t -v $PWD/docker/data:/var/lib/postgresql -v $PWD/snaplets:/srv/snaplets -v $PWD/static:/srv/static -v $PWD/src:/srv/src -v $PWD/devel.cfg:/srv/devel.cfg -v $PWD/defaults.cfg:/srv/defaults.cfg " ++ proj ++ "_devel"
      "test" ~> void (exec "cabal exec -- runghc -isrc spec/Main.hs")
      "db" ~> do pass <- liftIO $ require conf (T.pack "database-password")
                 let c = "PGPASSWORD=" ++ pass ++ " psql " ++ proj
@@ -99,10 +101,30 @@ main = do
      "db:migrate" ~> do need ["deps/dbp/migrate.d/.cabal-sandbox/bin/migrate"]
                         void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate up devel"
                         void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate up test"
-     "db:migrate:docker" ~> do exec "ln -sf docker/Dockerfile.migrate Dockerfile"
-                               exec $ "sudo docker build -t " ++ proj ++ "_migrate ."
-                               exec "rm Dockerfile"
-                               void $ exec $ "sudo docker run -w /srv -i -t -v $PWD/docker/data:/var/lib/postgresql " ++ proj ++ "_migrate"
+     "db:migrate:down" ~> do need ["deps/dbp/migrate.d/.cabal-sandbox/bin/migrate"]
+                             void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate down devel"
+                             void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate down test"
+     "db:status" ~> do need ["deps/dbp/migrate.d/.cabal-sandbox/bin/migrate"]
+                       void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate status devel"
+                       void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate status test"
+     "db:migrate:docker" ~>
+       do exec "ln -sf docker/Dockerfile.migrate Dockerfile"
+          exec $ "sudo docker build -t " ++ proj ++ "_migrate ."
+          exec "rm Dockerfile"
+          void $ exec $ "sudo docker run -w /srv -i -t -e \"MODE=up\" -v $PWD/docker/data:/var/lib/postgresql "
+                        ++ proj ++ "_migrate"
+     "db:migrate:down:docker" ~>
+       do exec "ln -sf docker/Dockerfile.migrate Dockerfile"
+          exec $ "sudo docker build -t " ++ proj ++ "_migrate ."
+          exec "rm Dockerfile"
+          void $ exec $ "sudo docker run -w /srv -i -t -e \"MODE=down\" -v $PWD/docker/data:/var/lib/postgresql "
+                         ++ proj ++ "_migrate"
+     "db:status:docker" ~>
+       do exec "ln -sf docker/Dockerfile.migrate Dockerfile"
+          exec $ "sudo docker build -t " ++ proj ++ "_migrate ."
+          exec "rm Dockerfile"
+          void $ exec $ "sudo docker run -w /srv -i -t -e \"MODE=status\" -v $PWD/docker/data:/var/lib/postgresql "
+                        ++ proj ++ "_migrate"
      "repl" ~> void (exec "cabal repl")
      "cabal.sandbox.config" *> \_ -> cmd "cabal sandbox init"
      "setup" ~> do need ["cabal.sandbox.config"]

@@ -64,10 +64,11 @@ The current list of supported tasks are:
 `run` - build and run the development version of the application. Only
     rebuilds if `.hs` files in `src/` have changed.
 
-`run:docker` - builds and runs the application using Docker. You need
-    to rerun this when you make changes, it does not do automatic
-    reloading (yet). In order to do this, you need Docker installed,
-    but do not need ghc (or postgresql). Also, currently the
+`run:docker` - builds and runs the application using Docker in development
+    mode, so it automatically recompiles/reloads on the fly. You should only
+    need to re-run this if you change the .cabal file. (Note, though, that
+    due to the way docker caches things, if you change files in `src` and rerun
+    this, it will recompile the application, though no dependencies). Also, currently the
     boot2docker setup for macosx can't support this, as we need to
     mount volumes into the container (to persist data in the database).
 
@@ -89,8 +90,17 @@ The current list of supported tasks are:
 `db:new` - create a new migration in the `migrations` directory, using
     the `migrate` utility (unreleased, on github at dbp/migrate)
 
-`db:migrate` - Runs migration against devel and test databases. The migrations
+`db:status` - prints out the status of all migrations (whether they've been applied) locally.
+
+`db:status:docker` - Like db:status, but for docker development environment.
+
+`db:migrate` - Runs all pending migrations against devel and test databases. The migrations
     are run via the `migrate` utility (see `db:new`).
 
 `db:migrate:docker` - Runs migrations against devel/test databases in
+    docker development environment.
+
+`db:migrate:down` - Reverts the last migration (in development and test).
+
+`db:migrate:down:docker` - Reverts last migration in devel/test databases in
     docker development environment.
