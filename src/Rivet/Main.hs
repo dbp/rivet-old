@@ -104,7 +104,8 @@ main = do
      "db:migrate:down" ~> do need ["deps/dbp/migrate.d/.cabal-sandbox/bin/migrate"]
                              void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate down devel"
                              void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate down test"
-     "db:status" ~> do need ["deps/dbp/migrate.d/.cabal-sandbox/bin/migrate"]
+     "db:status" ~> do need ["deps/dbp/migrate.d"]
+                       need ["deps/dbp/migrate.d/.cabal-sandbox/bin/migrate"]
                        void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate status devel"
                        void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate status test"
      "db:migrate:docker" ~>
