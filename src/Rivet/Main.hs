@@ -5,7 +5,7 @@ import           Control.Monad           (void, when)
 import           Data.Configurator
 import           Data.Configurator.Types
 import qualified Data.HashMap.Strict     as M
-import           Data.List               (isInfixOf)
+import           Data.List               (intercalate, isInfixOf)
 import           Data.Monoid
 import qualified Data.Text               as T
 import           Data.Time.Clock
@@ -42,7 +42,12 @@ main = do
   deps <- lookupDefault [] conf (T.pack "dependencies")
   let depDirs = map ((++ ".d") . ("deps/" ++) . T.unpack . head .
                      T.splitOn (T.pack ":") . head . T.splitOn (T.pack "+")) deps
-  shakeArgs opts $ do
+  shakeArgsWith opts [] $ \flags targets -> return $ Just $ do
+     if null targets
+        then return ()
+        else if "test" == head targets
+             then want ["test"]
+             else want targets
      sequence_ (map (\(cName, cCom) -> (T.unpack cName) ~> void (exec (T.unpack cCom)))
                     commands)
      sequence_ (map (\d ->
@@ -74,7 +79,7 @@ main = do
                         exec $ "sudo docker build -t " ++ proj ++ "_devel ."
                         exec "rm Dockerfile"
                         void $ exec $ "sudo docker run -w /srv -p 8000:8000 -i -t -v $PWD/docker/data:/var/lib/postgresql -v $PWD/snaplets:/srv/snaplets -v $PWD/static:/srv/static -v $PWD/src:/srv/src -v $PWD/devel.cfg:/srv/devel.cfg -v $PWD/defaults.cfg:/srv/defaults.cfg " ++ proj ++ "_devel"
-     "test" ~> void (exec "cabal exec -- runghc -isrc spec/Main.hs")
+     "test" ~> void (exec $ "cabal exec -- runghc -isrc spec/Main.hs -m \"" ++ (intercalate " " (tail targets) ++ "\""))
      "db" ~> do pass <- liftIO $ require conf (T.pack "database-password")
                 let c = "PGPASSWORD=" ++ pass ++ " psql " ++ proj
                         ++ "_devel -U" ++ proj ++ "_user" ++ " -hlocalhost"
@@ -84,7 +89,7 @@ main = do
                        isSuper <- case code of
                                     ExitFailure _ -> do void $ exec $ "sudo -u postgres psql template1 -c \"CREATE USER " ++ proj ++ "_user WITH SUPERUSER PASSWORD '" ++ pass ++ "'\""
                                                         return True
-                                    ExitSuccess -> do res <- liftIO $ readProcess "psql" ["-U" ++ proj ++ "_user", "template1", "-c", "\"SELECT current_setting('is_superuser')\""] []
+                                    ExitSuccess -> do res <- liftIO $ readProcess "psql" ["-U" ++ proj ++ "_user", "template1", "-c", "SELECT current_setting('is_superuser')"] []
                                                       return ("on" `isInfixOf` res)
 
                        if isSuper

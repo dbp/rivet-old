@@ -91,6 +91,8 @@ The current list of supported tasks are:
 
 `test` - run tests.
 
+`test pattern` - run tests with name matching pattern.
+
 `repl` - start a repl for project.
 
 `db` - connect to development database.
