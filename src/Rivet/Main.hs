@@ -40,7 +40,7 @@ main = do
                filter (\(k,v) -> (T.pack "commands.") `T.isPrefixOf` k) .
                M.toList) <$> getMap conf
   deps <- lookupDefault [] conf (T.pack "dependencies")
-  let depDirs = map ((++ ".d") . ("deps/" ++) . T.unpack . head .
+  let depDirs = map ((++ ".d/.rivetclone") . ("deps/" ++) . T.unpack . head .
                      T.splitOn (T.pack ":") . head . T.splitOn (T.pack "+")) deps
   shakeArgsWith opts [] $ \flags targets -> return $ Just $ do
      if null targets
@@ -53,21 +53,22 @@ main = do
      sequence_ (map (\d ->
        do let (repo':rest) = T.splitOn (T.pack "+") d
           let (repo:branchspec) = T.splitOn (T.pack ":") repo'
-          ("deps/" ++ (T.unpack repo) ++ ".d") *> \depdir -> do
-              shouldClone <- (not <$> doesDirectoryExist depdir)
-              () <- when shouldClone $ cmd ("git clone https://github.com/"
-                                            ++ (T.unpack repo) ++ " " ++ depdir)
-              () <- cmd (Cwd depdir) "git pull"
-              case branchspec of
-                (branch:_) -> cmd (Cwd depdir) ("git checkout " ++ (T.unpack branch))
-                _ -> return ()
-              let addSource s = do let str = "cabal sandbox add-source " ++ s
-                                   liftIO $ appendFile "deps/add-all" (str ++ "\n")
-                                   cmd str :: Action ()
-              case rest of
-                (subdirs:_) -> mapM_ (\subdir -> addSource (depdir ++ "/" ++ (T.unpack subdir)))
-                                     (T.splitOn (T.pack ",") subdirs)
-                _ -> addSource depdir)
+          let depdir = ("deps/" ++ (T.unpack repo) ++ ".d")
+          depdir ++ "/.rivetclone" *> \clonedFile -> do
+            liftIO $ removeFiles depdir ["//*"]
+            () <- cmd ("git clone https://github.com/"
+                       ++ (T.unpack repo) ++ " " ++ depdir)
+            writeFile' clonedFile ""
+            case branchspec of
+              (branch:_) -> cmd (Cwd depdir) ("git checkout " ++ (T.unpack branch))
+              _ -> return ()
+            let addSource s = do let str = "cabal sandbox add-source " ++ s
+                                 liftIO $ appendFile "deps/add-all" (str ++ "\n")
+                                 cmd str :: Action ()
+            case rest of
+              (subdirs:_) -> mapM_ (\subdir -> addSource (depdir ++ "/" ++ (T.unpack subdir)))
+                                   (T.splitOn (T.pack ",") subdirs)
+              _ -> addSource depdir)
         deps)
      let binary = "./.cabal-sandbox/bin/" ++ proj
      binary *> \_ -> do files <- getDirectoryFiles "" ["src/Main.hs", "*.cabal"]
@@ -107,7 +108,7 @@ main = do
                     liftIO $ putStrLn $ "Writing to migrations/" ++ str ++ "..."
                     liftIO $ writeFile ("migrations/" ++ str) migrationTemplate
      "deps/dbp/migrate.d/.cabal-sandbox/bin/migrate" *> \_ ->
-          do need ["deps/dbp/migrate.d"]
+          do need ["deps/dbp/migrate.d/.rivetclone"]
              () <- cmd (Cwd "deps/dbp/migrate.d") "cabal sandbox init"
              cmd (Cwd "deps/dbp/migrate.d") "cabal install"
      "db:migrate" ~> do need ["deps/dbp/migrate.d/.cabal-sandbox/bin/migrate"]
@@ -140,9 +141,9 @@ main = do
                         ++ proj ++ "_migrate"
      "repl" ~> void (exec "cabal repl")
      "cabal.sandbox.config" *> \_ -> cmd "cabal sandbox init"
+     "deps" ~> need depDirs
      "setup" ~> do need ["cabal.sandbox.config"]
-                   liftIO $ createDirectoryIfMissing False "deps"
-                   need depDirs
+                   need ["deps"]
                    need ["update"]
                    exec "cabal exec -- ghc-pkg expose hspec2"
                    exec "cabal exec -- ghc-pkg expose hspec-snap"

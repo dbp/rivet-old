@@ -53,6 +53,10 @@ present, they will what will be added as sources to the cabal
 sandbox. This is to support the pattern where one repository will
 contain multiple projects within it.
 
+If you want the dependency to be updated (to get upstream changes),
+you can remove "deps/user/reponame" or `touch
+deps/user/reponame/.rivetclone`.
+
 ```
 commands {
   foo = "bar"
@@ -74,6 +78,8 @@ The current list of supported tasks are:
 `setup` - sets up the project, pull in (and building) all the
     dependencies. Note that you can re-run this if you change
     dependencies, etc.
+
+`deps` - just does the dependency part of `setup`.
 
 `run` - build and run the development version of the application. Only
     rebuilds if `Main.hs` file in `src/` or the `.cabal` file has changed.
