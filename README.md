@@ -71,6 +71,24 @@ command names (see pull request
 useful in moving legacy applications over to using `rivet` (where they may
 have various ad-hoc Makefile commands).
 
+## Deployment Note
+
+Rivet expects that your deployment setup is via Docker. Currently it
+exects there is a single staging host and a single production host
+(which could be the same host). It expects that the staging containers
+have names that match `projnamestage` and production containers have
+names that match `projnameprod` (they can have arbitrary prefixes and
+suffixes, and will need to, or else naming conflicts will happen).
+
+Rivet also expects that you have CI set up so that staging is
+automatically built and deployed. The only `deploy` actions that we
+have are migrating the database and rolling what is on staging out to
+production. The two are assumed to be based on the same docker image
+(though will often be running different versions of it, of
+course). Finally, we expect that staging and production are connected
+to the same database, as our `migrate` happens within the context of the
+staging host.
+
 ## Tasks
 
 The current list of supported tasks are:
@@ -126,3 +144,12 @@ The current list of supported tasks are:
 
 `db:migrate:down:docker` - Reverts last migration in devel/test databases in
     docker development environment.
+
+`deploy:status` - Queries what is currently running on the staging and production hosts.
+
+`deploy:migrate` - Runs migration in staging environment and
+    revision. Since the staging server is assumed to be connected to the
+    production database, this will be the only production migration
+    needed.
+
+`deploy:rollout` - Pushes what is currently running on staging to production.

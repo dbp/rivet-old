@@ -2,6 +2,7 @@ module Main where
 
 import           Control.Applicative     ((<$>))
 import           Control.Monad           (void, when)
+import           Data.Char               (isSpace)
 import           Data.Configurator
 import           Data.Configurator.Types
 import qualified Data.HashMap.Strict     as M
@@ -15,6 +16,7 @@ import           Prelude                 hiding ((++))
 import           System.Directory        (createDirectoryIfMissing,
                                           getCurrentDirectory)
 import           System.Exit
+import           System.IO
 import           System.Process
 
 (++) :: Monoid a => a -> a -> a
@@ -31,6 +33,14 @@ exec :: String -> Action ExitCode
 exec c = liftIO $ do putStrLn c
                      system c
 
+readExec :: String -> Action String
+readExec c = liftIO $ do (_,Just out,_, ph) <- createProcess $ (shell c) { std_out = CreatePipe }
+                         waitForProcess ph
+                         hGetContents out
+
+getDockerTag proj h env = stripWhitespace <$> readExec ("ssh " ++ h ++ " \"docker ps\" | grep " ++ proj ++ env ++ " | awk '{ print $2}' | cut -d ':' -f 2")
+
+stripWhitespace = reverse . dropWhile isSpace . reverse . dropWhile isSpace
 
 main :: IO ()
 main = do
@@ -90,7 +100,7 @@ main = do
                        isSuper <- case code of
                                     ExitFailure _ -> do void $ exec $ "sudo -u postgres psql template1 -c \"CREATE USER " ++ proj ++ "_user WITH SUPERUSER PASSWORD '" ++ pass ++ "'\""
                                                         return True
-                                    ExitSuccess -> do res <- liftIO $ readProcess "psql" ["-U" ++ proj ++ "_user", "template1", "-c", "SELECT current_setting('is_superuser')"] []
+                                    ExitSuccess -> do res <- readExec $ "psql -U" ++ proj ++ "_user template1 -c \"SELECT current_setting('is_superuser')\""
                                                       return ("on" `isInfixOf` res)
 
                        if isSuper
@@ -149,6 +159,34 @@ main = do
                    exec "cabal exec -- ghc-pkg expose hspec-snap"
                    void $ exec "cabal exec -- ghc-pkg hide resource-pool"
      "update" ~> void (exec "cabal install -fdevelopment --only-dependencies --enable-tests --reorder-goals --force-reinstalls")
+     "deploy:migrate" ~> do stageHost <- liftIO $ require conf (T.pack "stage-host")
+                            prodImage <- liftIO $ require conf (T.pack "production-image")
+                            tag <- getDockerTag proj stageHost "stage"
+                            if length tag < 5
+                               then liftIO $ putStrLn "Couldn't get tag from staging."
+                               else do let c = "sudo docker run -w /srv -i -t -v /var/run/postgresql/.s.PGSQL.5432:/var/run/postgresql/.s.PGSQL.5432 -v /srv/prod.cfg:/srv/prod.cfg " ++ prodImage ++ ":" ++ tag ++ " migrate up prod"
+                                       void $ exec $ "ssh " ++ stageHost ++ " " ++ c
+
+     "deploy:status" ~>
+       do stageHost <- liftIO $ require conf (T.pack "stage-host")
+          prodHost <- liftIO $ require conf (T.pack "prod-host")
+          stageTag <- getDockerTag proj stageHost "stage"
+          prodTag <- getDockerTag proj prodHost "prod"
+          if length stageTag < 5 || length prodTag < 5
+             then liftIO $ putStrLn "Couldn't get tags."
+             else do liftIO $ putStrLn "Staging is running..."
+                     exec $ "git rev-list --format=%B --max-count=1 " ++ stageTag
+                     liftIO $ putStrLn "Production is running..."
+                     void $ exec $ "git rev-list --format=%B --max-count=1 " ++ prodTag
+     "deploy:rollout" ~> do stageHost <- liftIO $ require conf (T.pack "stage-host")
+                            prodHost <- liftIO $ require conf (T.pack "prod-host")
+                            prodImage <- liftIO $ require conf (T.pack "production-image")
+                            tag <- getDockerTag proj stageHost "stage"
+                            if length tag < 5
+                               then liftIO $ putStrLn "Couldn't get tag from staging."
+                               else do liftIO $ putStrLn "Deploying..."
+                                       exec $ "git rev-list --format=%B --max-count=1 " ++ tag
+                                       void $ exec $ "ssh " ++ prodHost ++ " /srv/deploy.sh " ++ proj ++ "prod " ++ prodImage ++ " " ++ tag ++ " 1"
 
 
 migrationTemplate :: String
