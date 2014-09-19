@@ -127,7 +127,7 @@ The current list of supported tasks are:
     to the postgres user, so you may be prompted for your password (depending
     on how you have sudo set up).
 
-`db:new` - create a new migration in the `migrations` directory, using
+`db:new name_of_migration` - create a new migration in the `migrations` directory, using
     the `migrate` utility (unreleased, on github at dbp/migrate)
 
 `db:status` - prints out the status of all migrations (whether they've been applied) locally.

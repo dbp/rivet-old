@@ -57,7 +57,11 @@ main = do
         then return ()
         else if "test" == head targets
              then want ["test"]
-             else want targets
+             else if "db:new" == head targets
+                  then if length targets /= 2
+                       then action $ liftIO (putStrLn "usage: rivet db:new migration_name")
+                       else want ["db:new"]
+                  else want targets
      sequence_ (map (\(cName, cCom) -> (T.unpack cName) ~> void (exec (T.unpack cCom)))
                     commands)
      sequence_ (map (\d ->
@@ -111,8 +115,7 @@ main = do
                                   void $ exec $ "sudo -u postgres psql template1 -c \"CREATE DATABASE " ++ proj ++ "_test\""
                                   void $ exec $ "sudo -u postgres psql template1 -c \"GRANT ALL ON DATABASE " ++ proj ++ "_devel TO " ++ proj ++ "_user\""
                                   void $ exec $ "sudo -u postgres psql template1 -c \"GRANT ALL ON DATABASE " ++ proj ++ "_test TO " ++ proj ++ "_user\""
-     "db:new" ~> do liftIO $ putStrLn "Migration name (no spaces, lowercase): "
-                    name <- liftIO getLine
+     "db:new" ~> do let name = head (tail targets)
                     now <- liftIO getCurrentTime
                     let str = (formatTime defaultTimeLocale "%Y%m%d%H%M%S_" now) ++ name ++ ".hs"
                     liftIO $ putStrLn $ "Writing to migrations/" ++ str ++ "..."
