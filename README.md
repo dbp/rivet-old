@@ -92,6 +92,7 @@ staging host.
 ## Tasks
 
 The current list of supported tasks are:
+`tasks` - prints out a list of tasks.
 
 `setup` - sets up the project, pull in (and building) all the
     dependencies. Note that you can re-run this if you change
@@ -109,9 +110,6 @@ The current list of supported tasks are:
     this, it will recompile the application, though no dependencies). Also, currently the
     boot2docker setup for macosx can't support this, as we need to
     mount volumes into the container (to persist data in the database).
-
-`update` - builds and installs all needed dependencies (including
-    those needed for tests).
 
 `test` - run tests.
 
