@@ -186,7 +186,7 @@ main = do
                                then liftIO $ putStrLn "Couldn't get tag from staging."
                                else do liftIO $ putStrLn "Deploying..."
                                        exec $ "git rev-list --format=%B --max-count=1 " ++ tag
-                                       void $ exec $ "ssh " ++ prodHost ++ " /srv/deploy.sh " ++ proj ++ "prod " ++ prodImage ++ " " ++ tag ++ " 1"
+                                       void $ exec $ "ssh " ++ prodHost ++ " /srv/deploy.sh " ++ proj ++ " " ++ proj ++ "prod " ++ prodImage ++ " " ++ tag ++ " 1"
 
 
 migrationTemplate :: String
