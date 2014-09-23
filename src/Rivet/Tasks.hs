@@ -7,14 +7,16 @@ import           Data.Configurator
 import           Data.Configurator.Types
 import qualified Data.HashMap.Strict     as M
 import           Data.List               (intercalate, isInfixOf)
+import           Data.Maybe              (fromMaybe)
 import           Data.Monoid
 import qualified Data.Text               as T
 import           Data.Time.Clock
 import           Data.Time.Format
 import           Development.Shake
 import           Prelude                 hiding ((++))
-import           System.Directory        (createDirectoryIfMissing,
+import           System.Directory        (copyFile, createDirectoryIfMissing,
                                           getCurrentDirectory)
+import           System.Environment      (lookupEnv)
 import           System.Exit
 import           System.IO
 import           System.Process
@@ -143,6 +145,36 @@ deployRollout proj conf =
                 exec $ "git rev-list --format=%B --max-count=1 " ++ tag
                 void $ exec $ "ssh " ++ prodHost ++ " /srv/deploy.sh " ++ proj ++ " " ++ proj ++ "prod " ++ prodImage ++ " " ++ tag ++ " 1"
 
+
+cryptEdit proj =
+  do e <- doesFileExist ".rivetcrypt"
+     let decrypted = "/tmp/rivetdecrypted-" ++ proj
+     editor <- fromMaybe "vi" <$> liftIO (lookupEnv "EDITOR")
+     if e
+        then exec $ "openssl enc -aes-256-cbc -d -a -salt -in .rivetcrypt -out " ++ decrypted ++ " -pass file:.rivetpass"
+        else exec $ "touch " ++ decrypted
+     exec $ editor ++ " " ++ decrypted
+     exec $ "openssl enc -aes-256-cbc -e -a -salt -in " ++ decrypted ++ " -out .rivetcrypt -pass file:.rivetpass"
+     void $ exec $ "rm " ++ decrypted
+
+cryptShow =
+  do e <- doesFileExist ".rivetcrypt"
+     if e
+        then void $ exec $ "openssl enc -aes-256-cbc -d -a -salt -in .rivetcrypt -pass file:.rivetpass"
+        else liftIO $ putStrLn "No .rivetcrypt."
+
+cryptSetPass proj =
+  do e <- doesFileExist ".rivetcrypt"
+     let decrypted = "/tmp/rivetdecrypted-" ++ proj
+     liftIO $ putStrLn "Enter new passphrase (will be stored in .rivetpass):"
+     pass <- liftIO getLine
+     if e
+        then exec $ "openssl enc -aes-256-cbc -d -a -salt -in .rivetcrypt -out " ++ decrypted ++ " -pass file:.rivetpass"
+        else exec $ "touch " ++ decrypted
+     liftIO $ copyFile ".rivetpass" ".rivetpass-0"
+     liftIO $ writeFile ".rivetpass" pass
+     exec $ "openssl enc -aes-256-cbc -e -a -salt -in " ++ decrypted ++ " -out .rivetcrypt -pass file:.rivetpass"
+     void $ exec $ "rm " ++ decrypted
 
 migrationTemplate :: String
 migrationTemplate = unlines ["{-# LANGUAGE OverloadedStrings #-}"

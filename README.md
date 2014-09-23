@@ -151,3 +151,13 @@ The current list of supported tasks are:
     needed.
 
 `deploy:rollout` - Pushes what is currently running on staging to production.
+
+`crypt:setpass` - Set a password on an encrypted file (used for the
+    production config file). The password is stored it `.rivetpass`, which
+    if you don't have anything in `.rivetcrypt`, you can edit directly.
+
+`crypt:edit` - Edit the encrypted file (`.rivetcrypt`) with `$EDITOR`
+    (or `vi` if EDITOR isn't set). It is intended to be checked into
+    version control, and is used to put production configuration settings.
+
+`crypt:show` - Show current encrypted file contents.

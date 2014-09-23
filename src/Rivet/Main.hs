@@ -67,6 +67,9 @@ main = do
      "deploy:status" ~> Tasks.deployStage proj conf
      "deploy:migrate" ~> Tasks.deployMigrate proj conf
      "deploy:rollout" ~> Tasks.deployRollout proj conf
+     "crypt:edit" ~> Tasks.cryptEdit proj
+     "crypt:show" ~> Tasks.cryptShow
+     "crypt:setpass" ~> Tasks.cryptSetPass proj
 
      "tasks" ~> liftIO (mapM_ (putStrLn . ("rivet " ++))
                               [ "run"
@@ -85,4 +88,8 @@ main = do
                               ,"setup"
                               ,"deploy:status"
                               ,"deploy:migrate"
-                              ,"deploy:rollout"])
+                              ,"deploy:rollout"
+                              ,"crypt:edit"
+                              ,"crypt:show"
+                              ,"crypt:setpass"
+                              ])
