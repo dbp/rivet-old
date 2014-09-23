@@ -22,7 +22,7 @@ import           System.Process
 import           Rivet.Common
 
 
-getDockerTag proj h env = stripWhitespace <$> readExec ("ssh " ++ h ++ " \"docker ps\" | grep " ++ proj ++ env ++ " | awk '{ print $2}' | cut -d ':' -f 2")
+getDockerTag proj h env = stripWhitespace <$> readExec ("ssh " ++ h ++ " \"docker ps\" | grep " ++ proj ++ "_" ++ env ++ " | awk '{ print $2}' | cut -d ':' -f 2")
 
 
 -- NOTE(dbp 2014-09-18): Tasks follow
@@ -117,7 +117,7 @@ deployMigrate proj conf =
      tag <- getDockerTag proj stageHost "stage"
      if length tag < 5
         then liftIO $ putStrLn "Couldn't get tag from staging."
-        else do let c = "sudo docker run -w /srv -i -t -v /var/run/postgresql/.s.PGSQL.5432:/var/run/postgresql/.s.PGSQL.5432 -v /srv/prod.cfg:/srv/prod.cfg " ++ prodImage ++ ":" ++ tag ++ " migrate up prod"
+        else do let c = "docker run -w /srv -i -t -v /var/run/postgresql/.s.PGSQL.5432:/var/run/postgresql/.s.PGSQL.5432 -v /srv/prod_" ++ tag ++ ".cfg:/srv/prod.cfg " ++ prodImage ++ ":" ++ tag ++ " migrate up prod"
                 void $ exec $ "ssh " ++ stageHost ++ " " ++ c
 
 deployStage proj conf =
