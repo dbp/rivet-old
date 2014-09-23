@@ -119,7 +119,7 @@ deployMigrate proj conf =
      tag <- getDockerTag proj stageHost "stage"
      if length tag < 5
         then liftIO $ putStrLn "Couldn't get tag from staging."
-        else do let c = "docker run -w /srv -i -t -v /var/run/postgresql/.s.PGSQL.5432:/var/run/postgresql/.s.PGSQL.5432 -v /srv/prod_" ++ tag ++ ".cfg:/srv/prod.cfg " ++ prodImage ++ ":" ++ tag ++ " migrate up prod"
+        else do let c = "docker run -w /srv -i -t -v /srv/data:/srv/data -v /var/run/postgresql/.s.PGSQL.5432:/var/run/postgresql/.s.PGSQL.5432 -v /srv/prod_" ++ tag ++ ".cfg:/srv/prod.cfg " ++ prodImage ++ ":" ++ tag ++ " migrate up prod"
                 void $ exec $ "ssh " ++ stageHost ++ " " ++ c
 
 deployStage proj conf =
