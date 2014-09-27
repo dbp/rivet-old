@@ -11,12 +11,20 @@ import           System.FilePath
 type FileData = (String, String)
 type DirData = FilePath
 
-loadTemplate :: Q [Dec]
-loadTemplate = do let dir = mkName "tDirTemplate"
-                  typeSig <- SigD dir `fmap` [t| ([String], [(String, String)]) |]
-                  v <- valD (varP dir) (normalB $ dirQ "template") []
-                  return [typeSig, v]
+loadFile :: String -> FilePath -> Q [Dec]
+loadFile nm pth = do let ident = mkName nm
+                     typeSig <- SigD ident `fmap` [t| String |]
+                     v <- valD (varP ident) (normalB $ lift =<< runIO (readFile pth)) []
+                     return [typeSig, v]
 
+loadProjectTemplate :: Q [Dec]
+loadProjectTemplate = do let dir = mkName "tDirTemplate"
+                         typeSig <- SigD dir `fmap` [t| ([String], [(String, String)]) |]
+                         v <- valD (varP dir) (normalB $ dirQ ("template" </> "project")) []
+                         return [typeSig, v]
+
+-- NOTE(dbp 2014-09-27): Much of this code is derived from that used
+-- in the Snap project starter.
 ------------------------------------------------------------------------------
 -- Gets all the directories in a DirTree
 --

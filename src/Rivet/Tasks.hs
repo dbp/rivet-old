@@ -31,10 +31,11 @@ import           System.Process
 import           Rivet.Common
 import           Rivet.InitTH
 
+-- NOTE(dbp 2014-09-27): These calls load in files from disk using TH.
+loadProjectTemplate
+loadFile "migrationTemplate" "template/migration.hs"
+
 getDockerTag proj h env = stripWhitespace <$> readExec ("ssh " ++ h ++ " \"docker ps\" | grep " ++ proj ++ "_" ++ env ++ "_ | awk '{ print $2}' | cut -d ':' -f 2")
-
-
-loadTemplate
 
 init projName = liftIO $ do mapM createDirectory (fst tDirTemplate)
                             mapM_ write (snd tDirTemplate)
@@ -200,19 +201,3 @@ cryptSetPass proj =
      liftIO $ writeFile ".rivetpass" pass
      exec $ "openssl enc -aes-256-cbc -e -a -salt -in " ++ decrypted ++ " -out .rivetcrypt -pass file:.rivetpass"
      void $ exec $ "rm " ++ decrypted
-
-migrationTemplate :: String
-migrationTemplate = unlines ["{-# LANGUAGE OverloadedStrings #-}"
-                            ,""
-                            ,"import Control.Monad"
-                            ,"import Database.Migrate"
-                            ,"import Site"
-                            ,""
-                            ,"main = runMainSnap app $ do"
-                            ,"  upSql runUp"
-                            ,"  downSql runDown"
-                            ,""
-                            ,"runUp = \"\""
-                            ,""
-                            ,"runDown = \"\""
-                            ,""]
