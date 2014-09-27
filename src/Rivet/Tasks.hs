@@ -24,7 +24,7 @@ import           System.Process
 import           Rivet.Common
 
 
-getDockerTag proj h env = stripWhitespace <$> readExec ("ssh " ++ h ++ " \"docker ps\" | grep " ++ proj ++ "_" ++ env ++ " | awk '{ print $2}' | cut -d ':' -f 2")
+getDockerTag proj h env = stripWhitespace <$> readExec ("ssh " ++ h ++ " \"docker ps\" | grep " ++ proj ++ "_" ++ env ++ "_ | awk '{ print $2}' | cut -d ':' -f 2")
 
 
 -- NOTE(dbp 2014-09-18): Tasks follow
@@ -43,6 +43,11 @@ db proj conf = do pass <- liftIO $ require conf (T.pack "database-password")
                   let c = "PGPASSWORD=" ++ pass ++ " psql " ++ proj
                           ++ "_devel -U" ++ proj ++ "_user" ++ " -hlocalhost"
                   void $ exec c
+
+dbTest proj conf = do pass <- liftIO $ require conf (T.pack "database-password")
+                      let c = "PGPASSWORD=" ++ pass ++ " psql " ++ proj
+                              ++ "_test -U" ++ proj ++ "_user" ++ " -hlocalhost"
+                      void $ exec c
 
 test targets =
   void (exec $ "cabal exec -- runghc -isrc spec/Main.hs -m \"" ++ (intercalate " " (tail targets) ++ "\""))
@@ -122,16 +127,18 @@ deployMigrate proj conf =
         else do let c = "docker run -w /srv -i -t -v /srv/data:/srv/data -v /var/run/postgresql/.s.PGSQL.5432:/var/run/postgresql/.s.PGSQL.5432 -v /srv/prod_" ++ tag ++ ".cfg:/srv/prod.cfg " ++ prodImage ++ ":" ++ tag ++ " migrate up prod"
                 void $ exec $ "ssh " ++ stageHost ++ " " ++ c
 
-deployStage proj conf =
+deployStatus proj conf =
   do stageHost <- liftIO $ require conf (T.pack "stage-host")
      prodHost <- liftIO $ require conf (T.pack "prod-host")
      stageTag <- getDockerTag proj stageHost "stage"
      prodTag <- getDockerTag proj prodHost "prod"
-     if length stageTag < 5 || length prodTag < 5
-        then liftIO $ putStrLn "Couldn't get tags."
+     if length stageTag < 5
+        then liftIO $ putStrLn "Couldn't get staging tag."
         else do liftIO $ putStrLn "Staging is running..."
-                exec $ "git rev-list --format=%B --max-count=1 " ++ stageTag
-                liftIO $ putStrLn "Production is running..."
+                void $ exec $ "git rev-list --format=%B --max-count=1 " ++ stageTag
+     if length prodTag < 5
+        then liftIO $ putStrLn "Couldn't get production tag."
+        else do liftIO $ putStrLn "Production is running..."
                 void $ exec $ "git rev-list --format=%B --max-count=1 " ++ prodTag
 
 deployRollout proj conf =
@@ -143,7 +150,7 @@ deployRollout proj conf =
         then liftIO $ putStrLn "Couldn't get tag from staging."
         else do liftIO $ putStrLn "Deploying..."
                 exec $ "git rev-list --format=%B --max-count=1 " ++ tag
-                void $ exec $ "ssh " ++ prodHost ++ " /srv/deploy.sh " ++ proj ++ " " ++ proj ++ "prod " ++ prodImage ++ " " ++ tag ++ " 1"
+                void $ exec $ "ssh " ++ prodHost ++ " /srv/deploy.sh " ++ proj ++ " prod " ++ prodImage ++ " " ++ tag ++ " 1"
 
 
 cryptEdit proj =

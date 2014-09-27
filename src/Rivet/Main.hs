@@ -54,6 +54,7 @@ main = do
      "run:docker" ~> Tasks.runDocker proj
      "test" ~> Tasks.test targets
      "db" ~> Tasks.db proj conf
+     "db:test" ~> Tasks.dbTest proj conf
      "db:create" ~> Tasks.dbCreate proj conf
      "db:new" ~> Tasks.dbNew targets
      "db:migrate" ~> Tasks.dbMigrate
@@ -64,7 +65,7 @@ main = do
      "db:status:docker" ~> Tasks.dbStatusDocker proj
      "repl" ~> Tasks.repl
      "setup" ~> Tasks.setup
-     "deploy:status" ~> Tasks.deployStage proj conf
+     "deploy:status" ~> Tasks.deployStatus proj conf
      "deploy:migrate" ~> Tasks.deployMigrate proj conf
      "deploy:rollout" ~> Tasks.deployRollout proj conf
      "crypt:edit" ~> Tasks.cryptEdit proj
