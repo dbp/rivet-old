@@ -40,8 +40,8 @@ runDocker proj =
      void $ exec $ "sudo docker run -w /srv -p 8000:8000 -i -t -v $PWD/docker/data:/var/lib/postgresql -v $PWD/snaplets:/srv/snaplets -v $PWD/static:/srv/static -v $PWD/src:/srv/src -v $PWD/devel.cfg:/srv/devel.cfg -v $PWD/defaults.cfg:/srv/defaults.cfg " ++ proj ++ "_devel"
 
 db proj conf = do pass <- liftIO $ require conf (T.pack "database-password")
-                  let c = "PGPASSWORD=" ++ pass ++ " psql " ++ proj
-                          ++ "_devel -U" ++ proj ++ "_user" ++ " -hlocalhost"
+                  let c = "PGPASSWORD=" ++ pass ++ " psql -hlocalhost " ++ proj
+                          ++ "_devel -U" ++ proj ++ "_user"
                   void $ exec c
 
 dbTest proj conf = do pass <- liftIO $ require conf (T.pack "database-password")
@@ -54,15 +54,15 @@ test targets =
 
 dbCreate proj conf =
   do pass <- liftIO $ require conf (T.pack "database-password")
-     code <- exec $ "PGPASSWORD=" ++ pass ++ " psql -U" ++ proj ++ "_user template1 -c 'SELECT 1'"
+     code <- exec $ "PGPASSWORD=" ++ pass ++ " psql -hlocalhost -U" ++ proj ++ "_user template1 -c 'SELECT 1'"
      isSuper <- case code of
                   ExitFailure _ -> do void $ exec $ "sudo -u postgres psql template1 -c \"CREATE USER " ++ proj ++ "_user WITH SUPERUSER PASSWORD '" ++ pass ++ "'\""
                                       return True
-                  ExitSuccess -> do res <- readExec $ "psql -U" ++ proj ++ "_user template1 -c \"SELECT current_setting('is_superuser')\""
+                  ExitSuccess -> do res <- readExec $ "psql -hlocalhost -U" ++ proj ++ "_user template1 -c \"SELECT current_setting('is_superuser')\""
                                     return ("on" `isInfixOf` res)
      if isSuper
-        then do exec $ "PGPASSWORD=" ++ pass ++ " psql -U" ++ proj ++ "_user template1 -c \"CREATE DATABASE " ++ proj ++ "_devel\""
-                exec $ "PGPASSWORD=" ++ pass ++ " psql -U" ++ proj ++ "_user template1 -c \"CREATE DATABASE " ++ proj ++ "_test\""
+        then do exec $ "PGPASSWORD=" ++ pass ++ " psql -hlocalhost -U" ++ proj ++ "_user template1 -c \"CREATE DATABASE " ++ proj ++ "_devel\""
+                exec $ "PGPASSWORD=" ++ pass ++ " psql -hlocalhost -U" ++ proj ++ "_user template1 -c \"CREATE DATABASE " ++ proj ++ "_test\""
                 return ()
         else do void $ exec $ "sudo -u postgres psql template1 -c \"CREATE DATABASE " ++ proj ++ "_devel\""
                 void $ exec $ "sudo -u postgres psql template1 -c \"CREATE DATABASE " ++ proj ++ "_test\""
