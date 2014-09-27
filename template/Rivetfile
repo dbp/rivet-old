@@ -1,0 +1,10 @@
+dependencies = [ "dbp/migrate"
+               , "dbp/hspec-snap"
+               , "karamaan/karamaan-opaleye:dev"
+               , "karamaan/karamaan-plankton"
+               , "karamaan/product-profunctors"
+               , "tomjaguarpaw/haskelldb:opaleye"
+               , "dbp/snap-plus"
+               ]
+
+database-password = "111"

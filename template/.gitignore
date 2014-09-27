@@ -1,0 +1,5 @@
+dist/
+deps/
+.cabal-sandbox
+cabal.sandbox.config
+.rivetpass
