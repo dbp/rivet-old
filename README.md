@@ -94,6 +94,12 @@ staging host.
 The current list of supported tasks are:
 `tasks` - prints out a list of tasks.
 
+`init` - Creates a project template in the current directory. The project
+    name is assumed to be the name of the current directory. Note that
+    while this step is optional, many tasks depend on conventions that are
+    expressed in the project template. This cannot be re-run, and should be
+    run instead of a `snap init` call.
+
 `setup` - sets up the project, pull in (and building) all the
     dependencies. Note that you can re-run this if you change
     dependencies, etc.

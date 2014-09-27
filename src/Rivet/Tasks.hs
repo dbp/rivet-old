@@ -1,31 +1,49 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Rivet.Tasks where
 
 import           Control.Applicative     ((<$>))
 import           Control.Monad           (void, when)
 import           Data.Char               (isSpace)
+import           Data.Char
 import           Data.Configurator
 import           Data.Configurator.Types
 import qualified Data.HashMap.Strict     as M
-import           Data.List               (intercalate, isInfixOf)
+import           Data.List               (intercalate, isInfixOf, isSuffixOf)
 import           Data.Maybe              (fromMaybe)
 import           Data.Monoid
+import qualified Data.Text               as T
 import qualified Data.Text               as T
 import           Data.Time.Clock
 import           Data.Time.Format
 import           Development.Shake
 import           Prelude                 hiding ((++))
-import           System.Directory        (copyFile, createDirectoryIfMissing,
+import           System.Console.GetOpt
+import           System.Directory        (copyFile, createDirectory,
+                                          createDirectoryIfMissing,
                                           getCurrentDirectory)
 import           System.Environment      (lookupEnv)
 import           System.Exit
+import           System.Exit
+import           System.FilePath
 import           System.IO
 import           System.Process
 
 import           Rivet.Common
-
+import           Rivet.InitTH
 
 getDockerTag proj h env = stripWhitespace <$> readExec ("ssh " ++ h ++ " \"docker ps\" | grep " ++ proj ++ "_" ++ env ++ "_ | awk '{ print $2}' | cut -d ':' -f 2")
 
+
+loadTemplate
+
+init projName = liftIO $ do mapM createDirectory (fst tDirTemplate)
+                            mapM_ write (snd tDirTemplate)
+  where write (f,c) = if isSuffixOf "project.cabal" f
+                      then writeFile (projName ++ ".cabal") (insertProjName $ T.pack c)
+                      else writeFile f c
+        isNameChar c = isAlphaNum c || c == '-'
+        insertProjName c = T.unpack $ T.replace (T.pack "project")
+                                                (T.pack $ filter isNameChar projName) c
 
 -- NOTE(dbp 2014-09-18): Tasks follow
 run proj =

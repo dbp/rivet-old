@@ -28,5 +28,9 @@ executable rivet
                      , process
                      , time >= 1.5 && < 1.6
                      , unordered-containers
+                     , template-haskell
+                     , directory
+                     , directory-tree
+                     , filepath
   hs-source-dirs:      src
   default-language:    Haskell2010
