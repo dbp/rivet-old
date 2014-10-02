@@ -76,8 +76,8 @@ have various ad-hoc Makefile commands).
 Rivet expects that your deployment setup is via Docker. Currently it
 exects there is a single staging host and a single production host
 (which could be the same host). It expects that the staging containers
-have names that match `projnamestage` and production containers have
-names that match `projnameprod` (they can have arbitrary prefixes and
+have names that match `projname_stage_` and production containers have
+names that match `projname_prod_` (they can have arbitrary prefixes and
 suffixes, and will need to, or else naming conflicts will happen).
 
 Rivet also expects that you have CI set up so that staging is
@@ -88,6 +88,8 @@ production. The two are assumed to be based on the same docker image
 course). Finally, we expect that staging and production are connected
 to the same database, as our `migrate` happens within the context of the
 staging host.
+
+[NOTE(dbp 2014-10-01): There are more details yet to be documented about deployment.]
 
 ## Tasks
 
