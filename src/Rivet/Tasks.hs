@@ -164,12 +164,13 @@ deployRollout proj conf =
   do stageHost <- liftIO $ require conf (T.pack "stage-host")
      prodHost <- liftIO $ require conf (T.pack "prod-host")
      prodImage <- liftIO $ require conf (T.pack "production-image")
+     prodInstances <- liftIO $ lookupDefault (1 :: Int) conf (T.pack "production-instances")
      tag <- getDockerTag proj stageHost "stage"
      if length tag < 5
         then liftIO $ putStrLn "Couldn't get tag from staging."
         else do liftIO $ putStrLn "Deploying..."
                 exec $ "git rev-list --format=%B --max-count=1 " ++ tag
-                void $ exec $ "ssh " ++ prodHost ++ " /srv/deploy.sh " ++ proj ++ " prod " ++ prodImage ++ " " ++ tag ++ " 1"
+                void $ exec $ "ssh " ++ prodHost ++ " /srv/deploy.sh " ++ proj ++ " prod " ++ prodImage ++ " " ++ tag ++ " " ++ (show prodInstances)
 
 
 cryptEdit proj =
