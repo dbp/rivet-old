@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Rivet.InitTH where
+module Rivet.TH where
 
 import qualified Data.Foldable              as F
 import           Data.List
@@ -22,6 +22,12 @@ loadProjectTemplate = do let dir = mkName "tDirTemplate"
                          typeSig <- SigD dir `fmap` [t| ([String], [(String, String)]) |]
                          v <- valD (varP dir) (normalB $ dirQ ("template" </> "project")) []
                          return [typeSig, v]
+
+loadModelTemplate :: Q [Dec]
+loadModelTemplate = do let dir = mkName "tModelTemplate"
+                       typeSig <- SigD dir `fmap` [t| ([String], [(String, String)]) |]
+                       v <- valD (varP dir) (normalB $ dirQ ("template" </> "model")) []
+                       return [typeSig, v]
 
 -- NOTE(dbp 2014-09-27): Much of this code is derived from that used
 -- in the Snap project starter.

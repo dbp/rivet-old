@@ -56,6 +56,8 @@ main = do
                   ("test":_) -> want ["test"]
                   ("db:new":_:[]) -> want ["db:new"]
                   ("db:new":_) -> action $ liftIO (putStrLn "usage: rivet db:new migration_name")
+                  ("model:new":[]) -> action $ liftIO (putStrLn "usage: rivet model:new model_name [field_name:field_type]*")
+                  ("model:new":_) -> want ["model:new"]
                   _ -> want targets
 
                 Rules.addCommands commands
@@ -75,6 +77,7 @@ main = do
                 "db:migrate:docker" ~> Tasks.dbMigrateDocker proj
                 "db:migrate:down:docker" ~> Tasks.dbMigrateDownDocker proj
                 "db:status:docker" ~> Tasks.dbStatusDocker proj
+                "model:new" ~> Tasks.modelNew proj targets
                 "repl" ~> Tasks.repl
                 "setup" ~> Tasks.setup
                 "deploy:status" ~> Tasks.deployStatus proj conf

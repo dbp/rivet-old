@@ -1,7 +1,9 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 module Rivet.Tasks where
 
 import           Control.Applicative     ((<$>))
+import           Control.Arrow
 import           Control.Monad           (void, when)
 import           Data.Char               (isSpace)
 import           Data.Char
@@ -11,7 +13,6 @@ import qualified Data.HashMap.Strict     as M
 import           Data.List               (intercalate, isInfixOf, isSuffixOf)
 import           Data.Maybe              (fromMaybe)
 import           Data.Monoid
-import qualified Data.Text               as T
 import qualified Data.Text               as T
 import           Data.Time.Clock
 import           Data.Time.Format
@@ -29,11 +30,12 @@ import           System.IO
 import           System.Process
 
 import           Rivet.Common
-import           Rivet.InitTH
+import           Rivet.TH
 
 -- NOTE(dbp 2014-09-27): These calls load in files from disk using TH.
 loadProjectTemplate
 loadFile "migrationTemplate" "template/migration.hs"
+loadModelTemplate
 
 getDockerTag proj h env = stripWhitespace <$> readExec ("ssh " ++ h ++ " \"docker ps\" | grep " ++ proj ++ "_" ++ env ++ "_ | awk '{ print $2}' | cut -d ':' -f 2")
 
@@ -127,6 +129,18 @@ dbStatusDocker proj =
      exec "rm Dockerfile"
      void $ exec $ "sudo docker run -w /srv -i -t -e \"MODE=status\" -v $PWD/docker/data:/var/lib/postgresql "
                    ++ proj ++ "_migrate"
+
+modelNew proj (_:nm:fields) =
+  do exec $ "mkdir -p src/" ++ nm
+     liftIO $ do mapM (createDirectory . addPath) (fst tModelTemplate)
+                 mapM_ (uncurry writeFile . (addPath *** (replace nm))) (snd tModelTemplate)
+  where addPath = (("src" </> nm) </>)
+        replace nm c = T.unpack .
+                       T.replace "mODEL" (T.toLower nm') .
+                       T.replace "MODEL" nm' .
+                       T.pack $ c
+          where nm' = T.pack nm
+
 
 repl = void (exec "cabal repl")
 
