@@ -37,7 +37,7 @@ loadProjectTemplate
 loadFile "migrationTemplate" "template/migration.hs"
 loadModelTemplate
 
-getDockerTag proj h env = stripWhitespace <$> readExec ("ssh " ++ h ++ " \"docker ps\" | grep " ++ proj ++ "_" ++ env ++ "_ | awk '{ print $2}' | cut -d ':' -f 2")
+getDockerTag proj h env = stripWhitespace <$> readExec ("ssh " ++ h ++ " \"docker ps\" | grep " ++ proj ++ "_" ++ env ++ "_ | awk '{ print $2}' | cut -d ':' -f 2 | head -n1")
 
 init projName = liftIO $ do mapM createDirectory (fst tDirTemplate)
                             mapM_ write (snd tDirTemplate)
