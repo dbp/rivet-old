@@ -160,6 +160,10 @@ The current list of supported tasks are:
 
 `deploy:rollout` - Pushes what is currently running on staging to production.
 
+`deploy:rollback SHA` - Rolls production back to the specified git
+revision (short version), which must correspond to a built image,
+which anything that was ever running does.
+
 `crypt:setpass` - Set a password on an encrypted file (used for the
     production config file). The password is stored it `.rivetpass`, which
     if you don't have anything in `.rivetcrypt`, you can edit directly.

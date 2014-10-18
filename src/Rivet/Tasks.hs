@@ -186,6 +186,12 @@ deployRollout proj conf =
                 exec $ "git rev-list --format=%B --max-count=1 " ++ tag
                 void $ exec $ "ssh " ++ prodHost ++ " /srv/deploy.sh " ++ proj ++ " prod " ++ prodImage ++ " " ++ tag ++ " " ++ (show prodInstances)
 
+deployRollback proj conf (_:tag:_) =
+  do prodHost <- liftIO $ require conf (T.pack "prod-host")
+     prodImage <- liftIO $ require conf (T.pack "production-image")
+     prodInstances <- liftIO $ lookupDefault (1 :: Int) conf (T.pack "production-instances")
+     liftIO $ putStrLn $ "Rolling back to " ++ tag ++ "..."
+     void $ exec $ "ssh " ++ prodHost ++ " /srv/deploy.sh " ++ proj ++ " prod " ++ prodImage ++ " " ++ tag ++ " " ++ (show prodInstances)
 
 cryptEdit proj =
   do e <- doesFileExist ".rivetcrypt"

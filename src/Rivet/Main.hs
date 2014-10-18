@@ -83,6 +83,7 @@ main = do
                 "deploy:status" ~> Tasks.deployStatus proj conf
                 "deploy:migrate" ~> Tasks.deployMigrate proj conf
                 "deploy:rollout" ~> Tasks.deployRollout proj conf
+                "deploy:rollback" ~> Tasks.deployRollback proj conf targets
                 "crypt:edit" ~> Tasks.cryptEdit proj
                 "crypt:show" ~> Tasks.cryptShow
                 "crypt:setpass" ~> Tasks.cryptSetPass proj
@@ -106,6 +107,7 @@ main = do
                                        ,"deploy:status"
                                        ,"deploy:migrate"
                                        ,"deploy:rollout"
+                                       ,"deploy:rollback"
                                        ,"crypt:edit"
                                        ,"crypt:show"
                                        ,"crypt:setpass"
