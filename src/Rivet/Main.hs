@@ -56,6 +56,8 @@ main = do
                   ("test":_) -> want ["test"]
                   ("db:new":_:[]) -> want ["db:new"]
                   ("db:new":_) -> action $ liftIO (putStrLn "usage: rivet db:new migration_name")
+                  ("deploy:rollback":_:[]) -> want ["deploy:rollback"]
+                  ("deploy:rollback":_) -> action $ liftIO (putStrLn "usage: rivet deploy:rollback SHA")
                   ("model:new":[]) -> action $ liftIO (putStrLn "usage: rivet model:new model_name [field_name:field_type]*")
                   ("model:new":_) -> want ["model:new"]
                   _ -> want targets
