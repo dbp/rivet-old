@@ -37,8 +37,6 @@ loadProjectTemplate
 loadFile "migrationTemplate" "template/migration.hs"
 loadModelTemplate
 
-getDockerTag proj h env = stripWhitespace <$> readExec ("ssh " ++ h ++ " \"docker ps\" | grep " ++ proj ++ "_" ++ env ++ "_ | awk '{ print $2}' | cut -d ':' -f 2 | head -n1")
-
 init projName = liftIO $ do mapM createDirectory (fst tDirTemplate)
                             mapM_ write (snd tDirTemplate)
   where write (f,c) = if isSuffixOf "project.cabal" f
@@ -150,49 +148,6 @@ setup = do need ["cabal.sandbox.config"]
            exec "cabal exec -- ghc-pkg expose hspec2"
            exec "cabal exec -- ghc-pkg expose hspec-snap"
            void $ exec "cabal exec -- ghc-pkg hide resource-pool"
-
-deployMigrate proj conf =
-  do stageHost <- liftIO $ require conf (T.pack "stage-host")
-     prodImage <- liftIO $ require conf (T.pack "production-image")
-     tag <- getDockerTag proj stageHost "stage"
-     if length tag < 5
-        then liftIO $ putStrLn "Couldn't get tag from staging."
-        else do let c = "docker run -w /srv -i -t -v /srv/data:/srv/data -v /var/run/postgresql/.s.PGSQL.5432:/var/run/postgresql/.s.PGSQL.5432 -v /srv/prod_" ++ tag ++ ".cfg:/srv/prod.cfg " ++ prodImage ++ ":" ++ tag ++ " migrate up prod"
-                void $ exec $ "ssh " ++ stageHost ++ " " ++ c
-
-deployStatus proj conf =
-  do stageHost <- liftIO $ require conf (T.pack "stage-host")
-     prodHost <- liftIO $ require conf (T.pack "prod-host")
-     stageTag <- getDockerTag proj stageHost "stage"
-     prodTag <- getDockerTag proj prodHost "prod"
-     if length stageTag < 5
-        then liftIO $ putStrLn "Couldn't get staging tag."
-        else do liftIO $ putStrLn "Staging is running..."
-                void $ exec $ "git rev-list --format=%B --max-count=1 " ++ stageTag
-     if length prodTag < 5
-        then liftIO $ putStrLn "Couldn't get production tag."
-        else do liftIO $ putStrLn "Production is running..."
-                void $ exec $ "git rev-list --format=%B --max-count=1 " ++ prodTag
-
-deployRollout proj conf =
-  do stageHost <- liftIO $ require conf (T.pack "stage-host")
-     prodHost <- liftIO $ require conf (T.pack "prod-host")
-     prodImage <- liftIO $ require conf (T.pack "production-image")
-     prodInstances <- liftIO $ lookupDefault (1 :: Int) conf (T.pack "production-instances")
-     tag <- getDockerTag proj stageHost "stage"
-     if length tag < 5
-        then liftIO $ putStrLn "Couldn't get tag from staging."
-        else do liftIO $ putStrLn "Deploying..."
-                exec $ "git rev-list --format=%B --max-count=1 " ++ tag
-                void $ exec $ "ssh " ++ prodHost ++ " /srv/deploy.sh " ++ proj ++ " prod " ++ prodImage ++ " " ++ tag ++ " " ++ (show prodInstances)
-
-deployRollback proj conf (_:tag:_) =
-  do prodHost <- liftIO $ require conf (T.pack "prod-host")
-     prodImage <- liftIO $ require conf (T.pack "production-image")
-     prodInstances <- liftIO $ lookupDefault (1 :: Int) conf (T.pack "production-instances")
-     liftIO $ putStrLn $ "Rolling back to " ++ tag ++ "..."
-     exec $ "git rev-list --format=%B --max-count=1 " ++ tag
-     void $ exec $ "ssh " ++ prodHost ++ " /srv/deploy.sh " ++ proj ++ " prod " ++ prodImage ++ " " ++ tag ++ " " ++ (show prodInstances)
 
 cryptEdit proj =
   do e <- doesFileExist ".rivetcrypt"

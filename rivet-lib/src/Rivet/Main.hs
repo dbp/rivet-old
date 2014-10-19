@@ -30,12 +30,6 @@ getProjectName :: IO String
 getProjectName = (reverse . takeWhile (/= '/') . reverse) <$>
                    getCurrentDirectory
 
-data Task = Task { taskName    :: String
-                 , taskNumArgs :: Int
-                 , taskBody    :: String -> Config -> [String] -> Action ()
-                 , taskUsage   :: String
-                 }
-
 mainWith :: [Task] -> IO ()
 mainWith tasks = do
   proj <- getProjectName
@@ -62,8 +56,6 @@ mainWith tasks = do
                   ("test":_) -> want ["test"]
                   ("db:new":_:[]) -> want ["db:new"]
                   ("db:new":_) -> action $ liftIO (putStrLn "usage: rivet db:new migration_name")
-                  ("deploy:rollback":_:[]) -> want ["deploy:rollback"]
-                  ("deploy:rollback":_) -> action $ liftIO (putStrLn "usage: rivet deploy:rollback SHA")
                   ("model:new":[]) -> action $ liftIO (putStrLn "usage: rivet model:new model_name [field_name:field_type]*")
                   ("model:new":_) -> want ["model:new"]
                   (target:args) ->
@@ -99,15 +91,11 @@ mainWith tasks = do
                 "model:new" ~> Tasks.modelNew proj targets
                 "repl" ~> Tasks.repl
                 "setup" ~> Tasks.setup
-                "deploy:status" ~> Tasks.deployStatus proj conf
-                "deploy:migrate" ~> Tasks.deployMigrate proj conf
-                "deploy:rollout" ~> Tasks.deployRollout proj conf
-                "deploy:rollback" ~> Tasks.deployRollback proj conf targets
                 "crypt:edit" ~> Tasks.cryptEdit proj
                 "crypt:show" ~> Tasks.cryptShow
                 "crypt:setpass" ~> Tasks.cryptSetPass proj
 
-                "tasks" ~> liftIO (mapM_ (putStrLn . ("rivet " ++))
+                "tasks" ~> liftIO (mapM_ (putStrLn . ("rivet " ++)) $
                                        [ "init"
                                        , "run"
                                        , "run:docker"
@@ -123,11 +111,7 @@ mainWith tasks = do
                                        ,"db:status:docker"
                                        ,"repl"
                                        ,"setup"
-                                       ,"deploy:status"
-                                       ,"deploy:migrate"
-                                       ,"deploy:rollout"
-                                       ,"deploy:rollback"
                                        ,"crypt:edit"
                                        ,"crypt:show"
                                        ,"crypt:setpass"
-                                       ])
+                                       ] ++ map taskName tasks)

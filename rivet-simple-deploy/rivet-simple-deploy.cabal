@@ -1,4 +1,4 @@
-name:                rivet
+name:                rivet-simple-deploy
 version:             0.1.0.0
 -- synopsis:
 -- description:
@@ -13,9 +13,15 @@ build-type:          Simple
 -- extra-source-files:
 cabal-version:       >=1.10
 
-executable rivet
-  main-is:             src/Main.hs
+library
+  exposed-modules:
+                  Rivet.Lib.SimpleDeploy
+  -- other-modules:
+  -- other-extensions:
   build-depends:       base >=4.7 && <5
-                     , rivet-lib >= 0.1.0.0
-                     , rivet-simple-deploy >= 0.1.0.0
+                     , rivet-lib
+                     , mtl
+                     , configurator
+                     , text
+  hs-source-dirs:      src
   default-language:    Haskell2010

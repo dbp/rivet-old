@@ -24,7 +24,7 @@ library
                 , Rivet.Tasks
                 , Rivet.TH
                 , Rivet.Rules
-  build-depends:       base >=4.7 && <4.8
+  build-depends:       base >=4.7 && <5
                      , directory >= 1.2.1.0
                      , shake
                      , configurator
