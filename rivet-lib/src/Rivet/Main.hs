@@ -82,7 +82,7 @@ mainWith tasks = do
                 "db:test" ~> Tasks.dbTest proj conf
                 "db:create" ~> Tasks.dbCreate proj conf
                 "db:new" ~> Tasks.dbNew targets
-                "db:migrate" ~> Tasks.dbMigrate
+                "db:migrate" ~> Tasks.dbMigrate proj conf
                 "db:migrate:down" ~> Tasks.dbMigrateDown
                 "db:status" ~> Tasks.dbStatus
                 "db:migrate:docker" ~> Tasks.dbMigrateDocker proj

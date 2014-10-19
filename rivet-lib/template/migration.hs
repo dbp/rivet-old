@@ -1,13 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
+module MIGRATION_MODULE where
 
 import           Control.Monad
-import           Database.Migrate
-import           Site
+import           Rivet.Migration
 
-main = runMainSnap app $ do
-  upSql runUp
-  downSql runDown
+migrate = sql up down
 
-runUp = ""
+up = ""
 
-runDown = ""
+down = ""

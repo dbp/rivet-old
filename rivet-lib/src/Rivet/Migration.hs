@@ -4,8 +4,11 @@ module Rivet.Migration where
 import           Control.Applicative
 import           Data.Maybe
 import           Data.Monoid
-import           Data.Text           (Text)
+import           Data.String
+import           Data.Text                  (Text)
+import qualified Data.Text                  as T
 import           Data.Tuple
+import           Database.PostgreSQL.Simple
 
 -- NOTE(dbp 2014-10-18): step is a pair of up,down queries.
 data Migration v = Migration { migValue :: v, migSteps :: [(Text, Text)]}
@@ -14,9 +17,14 @@ data ColumnSpec = ColumnSpec { colName        :: Text
                              , colDefault     :: Maybe Text
                              , colConstraints :: Maybe Text
                              }
-data IndexSpec = IndexSpec { indColumn :: Text
-                           , indType   :: Text
-                           }
+
+
+data Direction = Up | Down
+
+run :: Connection -> Direction -> Migration () -> IO ()
+run conn dir m = mapM_ (\p -> execute_ conn (fromString . T.unpack $ pick dir p)) (migSteps m)
+  where pick Up (sql,_) = sql
+        pick Down (_,sql) = sql
 
 instance Functor Migration where
   fmap f m = m { migValue = f (migValue m) }
@@ -45,12 +53,6 @@ createTable tab cols = do add ("CREATE TABLE " <> tab, "DROP TABLE " <> tab)
 -- currently (so up and down may not be inverses if you mess that up).
 dropTable :: Text -> [ColumnSpec] -> Migration ()
 dropTable tab = invert . createTable tab
-
-createIndex :: Text -> IndexSpec -> Migration ()
-createIndex = undefined
-
-dropIndex :: Text -> IndexSpec -> Migration ()
-dropIndex = undefined
 
 renameColumn :: Text -> Text -> Text -> Migration ()
 renameColumn tab old new =

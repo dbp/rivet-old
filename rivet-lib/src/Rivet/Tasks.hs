@@ -2,27 +2,32 @@
 {-# LANGUAGE TemplateHaskell   #-}
 module Rivet.Tasks where
 
-import           Control.Applicative     ((<$>))
+
+import           Control.Applicative        ((<$>))
 import           Control.Arrow
-import           Control.Monad           (void, when)
-import           Data.Char               (isSpace)
+import           Control.Monad              (filterM, void, when)
+import           Data.Char                  (isSpace)
 import           Data.Char
 import           Data.Configurator
 import           Data.Configurator.Types
-import qualified Data.HashMap.Strict     as M
-import           Data.List               (intercalate, isInfixOf, isSuffixOf)
-import           Data.Maybe              (fromMaybe)
+import qualified Data.HashMap.Strict        as M
+import           Data.List                  (intercalate, isInfixOf, isSuffixOf,
+                                             sort)
+import           Data.Maybe                 (fromMaybe)
 import           Data.Monoid
-import qualified Data.Text               as T
+import qualified Data.Text                  as T
 import           Data.Time.Clock
 import           Data.Time.Format
-import           Development.Shake
-import           Prelude                 hiding ((++))
+import           Database.PostgreSQL.Simple
+import           Development.Shake          hiding (getDirectoryContents)
+import           Prelude                    hiding ((++))
 import           System.Console.GetOpt
-import           System.Directory        (copyFile, createDirectory,
-                                          createDirectoryIfMissing,
-                                          getCurrentDirectory)
-import           System.Environment      (lookupEnv)
+import           System.Directory           (copyFile, createDirectory,
+                                             createDirectoryIfMissing,
+                                             getCurrentDirectory,
+                                             getDirectoryContents,
+                                             getTemporaryDirectory)
+import           System.Environment         (lookupEnv)
 import           System.Exit
 import           System.Exit
 import           System.FilePath
@@ -40,11 +45,12 @@ loadModelTemplate
 init projName = liftIO $ do mapM createDirectory (fst tDirTemplate)
                             mapM_ write (snd tDirTemplate)
   where write (f,c) = if isSuffixOf "project.cabal" f
-                      then writeFile (projName ++ ".cabal") (insertProjName $ T.pack c)
+                      then writeFile (projName ++ ".cabal") (insertProjName c)
                       else writeFile f c
         isNameChar c = isAlphaNum c || c == '-'
-        insertProjName c = T.unpack $ T.replace (T.pack "project")
-                                                (T.pack $ filter isNameChar projName) c
+        insertProjName c = replace "project" (filter isNameChar projName) c
+
+replace old new s = T.unpack . T.replace (T.pack old) (T.pack new) $ T.pack s
 
 -- NOTE(dbp 2014-09-18): Tasks follow
 run proj =
@@ -91,13 +97,49 @@ dbCreate proj conf =
 dbNew targets =
   do let name = head (tail targets)
      now <- liftIO getCurrentTime
-     let str = (formatTime defaultTimeLocale "%Y%m%d%H%M%S_" now) ++ name ++ ".hs"
+     let modname = (formatTime defaultTimeLocale "M%Y%m%d%H%M%S_" now) ++ name
+         str = modname ++ ".hs"
      liftIO $ putStrLn $ "Writing to migrations/" ++ str ++ "..."
-     liftIO $ writeFile ("migrations/" ++ str) migrationTemplate
+     liftIO $ writeFile ("migrations/" ++ str)
+                        (replace "MIGRATION_MODULE" modname migrationTemplate)
 
-dbMigrate = do need ["deps/dbp/migrate.d/.cabal-sandbox/bin/migrate"]
-               void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate up devel"
-               void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate up test"
+dbMigrate proj conf =
+  do liftIO $ migrate proj conf "devel"
+     liftIO $ migrate proj conf "test"
+
+migrate proj conf env =
+  do dbuser <- lookupDefault (proj ++ "_user") conf "database-user"
+     dbpass <- require conf "database-password"
+     dbhost <- lookupDefault "127.0.0.1" conf "database-host"
+     dbport <- lookupDefault 5432 conf "database-port"
+     c <- connect (ConnectInfo dbhost dbport dbuser dbpass (proj ++ "_" ++ env))
+     execute_ c "CREATE TABLE IF NOT EXISTS migrations (name text NOT NULL PRIMARY KEY, run_at timestamptz NOT NULL DEFAULT now())"
+
+     migrations <- sort . map stripSuffix . filter isCode <$> getDirectoryContents "migrations"
+     missing <- filterM (notExists c) migrations
+     if null missing
+        then putStrLn "No migrations to run."
+        else do tmp <- getTemporaryDirectory
+                now <- getCurrentTime
+                let main = tmp ++ "/migrate_" ++ formatTime defaultTimeLocale "%Y%m%d%H%M%S_" now ++ env ++ ".hs"
+                putStrLn $ "Writing migration script to " ++ main ++ "..."
+                writeFile main $ "import Database.PostgreSQL.Simple\nimport Rivet.Migration\n" ++
+                                 (unlines $ map createImport missing) ++
+                                 "\nmain = do\n" ++
+                                 (formatconnect dbhost dbport dbuser dbpass (proj ++ "_" ++ env)) ++
+                                 (unlines $ map createRun missing)
+                -- exec $ "cabal exec -- runghc -isrc -imigrations " ++ main
+  where stripSuffix = reverse . drop 3 . reverse
+        isCode = isSuffixOf ".hs"
+        notExists c m =
+          null <$> liftIO (getMigration c m)
+        getMigration :: Connection -> String -> IO [(Only String)]
+        getMigration c m = query c "SELECT name FROM migrations WHERE name = ?" (Only m)
+        createImport m = "import qualified " ++ m
+        createRun m = "  run c Up " ++ m ++ ".migrate"
+        formatconnect h p u ps nm = "  c <- connect (ConnectInfo " ++ w h ++ " " ++ show p ++ " " ++ w u ++ " " ++ w ps ++ " " ++ w nm ++ ")\n"
+          where w s = "\"" ++ s ++ "\""
+
 dbMigrateDown =
   do need ["deps/dbp/migrate.d/.cabal-sandbox/bin/migrate"]
      void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate down devel"
