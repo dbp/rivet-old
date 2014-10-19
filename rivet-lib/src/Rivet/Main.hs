@@ -76,7 +76,6 @@ mainWith tasks = do
                 mapM_ (\t -> taskName t ~> taskBody t proj conf (tail targets)) tasks
                 "cabal.sandbox.config" *> \_ -> cmd "cabal sandbox init"
                 "run" ~> Tasks.run proj
-                "run:docker" ~> Tasks.runDocker proj
                 "test" ~> Tasks.test targets
                 "db" ~> Tasks.db proj conf
                 "db:test" ~> Tasks.dbTest proj conf
@@ -85,9 +84,6 @@ mainWith tasks = do
                 "db:migrate" ~> Tasks.dbMigrate proj conf
                 "db:migrate:down" ~> Tasks.dbMigrateDown proj conf
                 "db:status" ~> Tasks.dbStatus proj conf
-                "db:migrate:docker" ~> Tasks.dbMigrateDocker proj
-                "db:migrate:down:docker" ~> Tasks.dbMigrateDownDocker proj
-                "db:status:docker" ~> Tasks.dbStatusDocker proj
                 "model:new" ~> Tasks.modelNew proj targets
                 "repl" ~> Tasks.repl
                 "setup" ~> Tasks.setup
@@ -98,7 +94,6 @@ mainWith tasks = do
                 "tasks" ~> liftIO (mapM_ (putStrLn . ("rivet " ++)) $
                                        [ "init"
                                        , "run"
-                                       , "run:docker"
                                        ,"test [pattern]"
                                        ,"db"
                                        ,"db:create"
@@ -106,9 +101,6 @@ mainWith tasks = do
                                        ,"db:migrate"
                                        ,"db:migrate:down"
                                        ,"db:status"
-                                       ,"db:migrate:docker"
-                                       ,"db:migrate:down:docker"
-                                       ,"db:status:docker"
                                        ,"repl"
                                        ,"setup"
                                        ,"crypt:edit"
