@@ -1,4 +1,4 @@
-module Main where
+module Rivet.Main where
 
 import           Control.Applicative     ((<$>))
 import           Control.Monad           (void, when)
@@ -30,8 +30,14 @@ getProjectName :: IO String
 getProjectName = (reverse . takeWhile (/= '/') . reverse) <$>
                    getCurrentDirectory
 
-main :: IO ()
-main = do
+data Task = Task { taskName    :: String
+                 , taskNumArgs :: Int
+                 , taskBody    :: String -> Config -> [String] -> Action ()
+                 , taskUsage   :: String
+                 }
+
+mainWith :: [Task] -> IO ()
+mainWith tasks = do
   proj <- getProjectName
   shakeArgsWith opts [] $ \flags targets ->
     case targets of
@@ -60,11 +66,22 @@ main = do
                   ("deploy:rollback":_) -> action $ liftIO (putStrLn "usage: rivet deploy:rollback SHA")
                   ("model:new":[]) -> action $ liftIO (putStrLn "usage: rivet model:new model_name [field_name:field_type]*")
                   ("model:new":_) -> want ["model:new"]
-                  _ -> want targets
-
+                  (target:args) ->
+                    do mapM_ (\t ->
+                             if taskName t == target
+                                then if length args == taskNumArgs t
+                                        then want [taskName t]
+                                        else action $ liftIO (putStrLn $
+                                                                "usage: rivet " ++
+                                                                taskName t ++ " " ++
+                                                                taskUsage t)
+                                else return ())
+                             tasks
+                       when (not (target `elem` (map taskName tasks))) $ want targets
                 Rules.addCommands commands
                 Rules.addDependencies deps
                 Rules.addBinary proj
+                mapM_ (\t -> taskName t ~> taskBody t proj conf (tail targets)) tasks
                 "cabal.sandbox.config" *> \_ -> cmd "cabal sandbox init"
                 "run" ~> Tasks.run proj
                 "run:docker" ~> Tasks.runDocker proj
