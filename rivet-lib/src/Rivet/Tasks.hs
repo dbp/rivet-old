@@ -26,7 +26,7 @@ import           System.Directory           (copyFile, createDirectory,
                                              createDirectoryIfMissing,
                                              getCurrentDirectory,
                                              getDirectoryContents,
-                                             getTemporaryDirectory)
+                                             getTemporaryDirectory, removeFile)
 import           System.Environment         (lookupEnv)
 import           System.Exit
 import           System.Exit
@@ -129,7 +129,10 @@ migrate proj conf env =
                                  "\nmain = do\n" ++
                                  (formatconnect dbhost dbport dbuser dbpass (proj ++ "_" ++ env)) ++
                                  (unlines $ map createRun missing)
-                -- exec $ "cabal exec -- runghc -isrc -imigrations " ++ main
+                putStrLn $ "Running " ++ main ++ "..."
+                system $ "cabal exec -- runghc -isrc -imigrations " ++ main
+                putStrLn $ "Cleaning up... "
+                removeFile main
   where stripSuffix = reverse . drop 3 . reverse
         isCode = isSuffixOf ".hs"
         notExists c m =

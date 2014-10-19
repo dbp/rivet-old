@@ -24,7 +24,6 @@ library
                 , Rivet.Tasks
                 , Rivet.TH
                 , Rivet.Rules
-                , Rivet.Migration
   build-depends:       base >=4.7 && <5
                      , directory >= 1.2.1.0
                      , shake
