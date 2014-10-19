@@ -21,8 +21,11 @@ data ColumnSpec = ColumnSpec { colName        :: Text
 
 data Direction = Up | Down
 
-run :: Connection -> Direction -> Migration () -> IO ()
-run conn dir m = mapM_ (\p -> execute_ conn (fromString . T.unpack $ pick dir p)) (migSteps m)
+run :: Text -> Connection -> Direction -> Migration () -> IO ()
+run nm conn dir m =
+  do mapM_ (\p -> execute_ conn (fromString . T.unpack $ pick dir p)) (migSteps m)
+     execute conn "INSERT INTO migrations (name) values (?)" (Only nm)
+     return ()
   where pick Up (sql,_) = sql
         pick Down (_,sql) = sql
 

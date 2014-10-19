@@ -104,54 +104,79 @@ dbNew targets =
      liftIO $ writeFile ("migrations/" ++ str)
                         (replace "MIGRATION_MODULE" modname migrationTemplate)
 
-dbMigrate proj conf =
-  do liftIO $ migrate proj conf "devel"
-     liftIO $ migrate proj conf "test"
+data MigrateMode = Up | Down | Status deriving Show
 
-migrate proj conf env =
+dbMigrate proj conf =
+  do liftIO $ migrate proj conf "devel" Up
+     liftIO $ migrate proj conf "test" Up
+
+dbMigrateDown proj conf =
+  do liftIO $ migrate proj conf "devel" Down
+     liftIO $ migrate proj conf "test" Down
+
+dbStatus proj conf = do liftIO $ migrate proj conf "devel" Status
+                        liftIO $ migrate proj conf "test" Status
+
+migrate proj conf env mode =
   do dbuser <- lookupDefault (proj ++ "_user") conf "database-user"
      dbpass <- require conf "database-password"
      dbhost <- lookupDefault "127.0.0.1" conf "database-host"
      dbport <- lookupDefault 5432 conf "database-port"
      c <- connect (ConnectInfo dbhost dbport dbuser dbpass (proj ++ "_" ++ env))
      execute_ c "CREATE TABLE IF NOT EXISTS migrations (name text NOT NULL PRIMARY KEY, run_at timestamptz NOT NULL DEFAULT now())"
-
-     migrations <- sort . map stripSuffix . filter isCode <$> getDirectoryContents "migrations"
-     missing <- filterM (notExists c) migrations
-     if null missing
-        then putStrLn "No migrations to run."
-        else do tmp <- getTemporaryDirectory
-                now <- getCurrentTime
-                let main = tmp ++ "/migrate_" ++ formatTime defaultTimeLocale "%Y%m%d%H%M%S_" now ++ env ++ ".hs"
-                putStrLn $ "Writing migration script to " ++ main ++ "..."
-                writeFile main $ "import Database.PostgreSQL.Simple\nimport Rivet.Migration\n" ++
-                                 (unlines $ map createImport missing) ++
-                                 "\nmain = do\n" ++
-                                 (formatconnect dbhost dbport dbuser dbpass (proj ++ "_" ++ env)) ++
-                                 (unlines $ map createRun missing)
-                putStrLn $ "Running " ++ main ++ "..."
-                system $ "cabal exec -- runghc -isrc -imigrations " ++ main
-                putStrLn $ "Cleaning up... "
-                removeFile main
+     tmp <- getTemporaryDirectory
+     now <- getCurrentTime
+     let main = tmp ++ "/migrate_" ++ formatTime defaultTimeLocale "%Y%m%d%H%M%S_" now ++ env ++ ".hs"
+     putStrLn $ "Writing migration script to " ++ main ++ "..."
+     migrations <- sort . map stripSuffix . filter isCode <$>
+                   getDirectoryContents "migrations"
+     case mode of
+       Up ->
+         do missing <- filterM (notExists c) migrations
+            if null missing
+               then putStrLn "No migrations to run."
+               else writeFile main $
+                      "import Database.PostgreSQL.Simple\nimport Rivet.Migration\n" ++
+                      (unlines $ map createImport missing) ++
+                      "\nmain = do\n" ++
+                      (formatconnect dbhost dbport dbuser dbpass (proj ++ "_" ++ env)) ++
+                      (unlines $ map (createRun mode) missing)
+       Down -> do toDown <- dropWhileM (notExists c) $ reverse migrations
+                  case toDown of
+                    (x:_) -> writeFile main $
+                               "import Database.PostgreSQL.Simple\nimport Rivet.Migration\n" ++
+                               createImport x ++
+                               "\nmain = do\n" ++
+                               (formatconnect dbhost dbport dbuser dbpass (proj ++ "_" ++ env)) ++
+                               createRun mode x
+                    _ -> putStrLn "No migrations remaining."
+       Status -> mapM_ (\m -> do ne <- notExists c m
+                                 if ne
+                                    then putStrLn $ m ++ " in " ++ env
+                                    else putStrLn $ " APPLIED " ++ m ++ " in " ++ env)
+                       migrations
+     case mode of
+       Status -> return ()
+       _ -> do putStrLn $ "Running " ++ main ++ "..."
+               system $ "cabal exec -- runghc -isrc -imigrations " ++ main
+               putStrLn $ "Cleaning up... "
+               removeFile main
   where stripSuffix = reverse . drop 3 . reverse
         isCode = isSuffixOf ".hs"
+        dropWhileM :: Monad m => (a -> m Bool) -> [a] -> m [a]
+        dropWhileM f [] = return []
+        dropWhileM f (x:xs) = do r <- f x
+                                 if r
+                                    then dropWhileM f xs
+                                    else return (x:xs)
         notExists c m =
           null <$> liftIO (getMigration c m)
         getMigration :: Connection -> String -> IO [(Only String)]
         getMigration c m = query c "SELECT name FROM migrations WHERE name = ?" (Only m)
         createImport m = "import qualified " ++ m
-        createRun m = "  run c Up " ++ m ++ ".migrate"
+        createRun mode m = "  run " ++ w m ++ " c " ++ show mode ++ " " ++ m ++ ".migrate"
         formatconnect h p u ps nm = "  c <- connect (ConnectInfo " ++ w h ++ " " ++ show p ++ " " ++ w u ++ " " ++ w ps ++ " " ++ w nm ++ ")\n"
-          where w s = "\"" ++ s ++ "\""
-
-dbMigrateDown =
-  do need ["deps/dbp/migrate.d/.cabal-sandbox/bin/migrate"]
-     void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate down devel"
-     void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate down test"
-
-dbStatus = do need ["deps/dbp/migrate.d/.cabal-sandbox/bin/migrate"]
-              void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate status devel"
-              void $ exec "./deps/dbp/migrate.d/.cabal-sandbox/bin/migrate status test"
+        w s = "\"" ++ s ++ "\""
 
 dbMigrateDocker proj =
   do exec "ln -sf docker/Dockerfile.migrate Dockerfile"
