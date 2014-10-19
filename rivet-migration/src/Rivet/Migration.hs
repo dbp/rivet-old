@@ -24,7 +24,9 @@ data Direction = Up | Down
 run :: String -> Connection -> Direction -> Migration () -> IO ()
 run nm conn dir m =
   do mapM_ (\p -> execute_ conn (fromString . T.unpack $ pick dir p)) (migSteps m)
-     execute conn "INSERT INTO migrations (name) values (?)" (Only nm)
+     case dir of
+       Up -> execute conn "INSERT INTO migrations (name) values (?)" (Only nm)
+       Down -> execute conn "DELETE FROM migrations WHERE name = ?" (Only nm)
      return ()
   where pick Up (sql,_) = sql
         pick Down (_,sql) = sql
