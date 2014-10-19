@@ -31,7 +31,8 @@ library
                      , configurator
                      , text
                      , process
-                     , time >= 1.5 && < 1.6
+                     , time >= 1.4 && < 1.5
+                     , old-locale
                      , unordered-containers
                      , template-haskell
                      , directory
