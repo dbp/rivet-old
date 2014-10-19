@@ -18,6 +18,6 @@ library
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.7 && <4.8
-                     , rivet-lib
+                     , rivet-core
   hs-source-dirs: src
   default-language:    Haskell2010

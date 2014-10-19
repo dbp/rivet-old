@@ -92,15 +92,17 @@ mainWith tasks = do
                 "crypt:setpass" ~> Tasks.cryptSetPass proj
 
                 "tasks" ~> liftIO (mapM_ (putStrLn . ("rivet " ++)) $
-                                       [ "init"
-                                       , "run"
+                                       ["init"
+                                       ,"run"
                                        ,"test [pattern]"
                                        ,"db"
+                                       ,"db:test"
                                        ,"db:create"
                                        ,"db:new migration_name"
                                        ,"db:migrate"
                                        ,"db:migrate:down"
                                        ,"db:status"
+                                       ,"model:new ModelName"
                                        ,"repl"
                                        ,"setup"
                                        ,"crypt:edit"

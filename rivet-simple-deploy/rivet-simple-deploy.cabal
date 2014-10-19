@@ -19,7 +19,7 @@ library
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.7 && <5
-                     , rivet-lib
+                     , rivet-core
                      , mtl
                      , configurator
                      , text
