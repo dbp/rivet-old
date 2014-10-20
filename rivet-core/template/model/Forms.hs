@@ -11,5 +11,7 @@ import           Text.Digestive.Snap
 import           MODEL.Types
 
 newForm :: Form Text AppHandler MODELNew
-newForm = List' () <$> "name" .: nonEmpty (slugForm Nothing)
-                   <*> pure ()
+newForm = MODEL' () <$> MFORM
+
+editForm :: MODEL -> Form Text AppHandler MODEL
+editForm (MODEL' id' mFIELDS) = MODEL' id' <$> MEDITFORM

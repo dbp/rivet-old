@@ -32,7 +32,7 @@ routes = [ ("",       heistServe)
 
 app :: SnapletInit App App
 app = makeSnaplet "app" "" Nothing $ do
-    h <- nestSnaplet "" heist $ heistInit' "templates"
+    h <- nestSnaplet "" heist $ heistInit' ""
          mempty { hcLoadTimeSplices = defaultLoadTimeSplices,
                   hcInterpretedSplices = plusSplices }
     conf <- getSnapletUserConfig
@@ -45,4 +45,5 @@ app = makeSnaplet "app" "" Nothing $ do
     ns <- liftIO $ makeResolvSeed defaultResolvConf
     e <- getEnvironment
     addRoutes routes
+    addTemplates h "templates"
     return $ App h s d r ns url (T.pack e)

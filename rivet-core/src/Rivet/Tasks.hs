@@ -11,8 +11,8 @@ import           Data.Char
 import           Data.Configurator
 import           Data.Configurator.Types
 import qualified Data.HashMap.Strict        as M
-import           Data.List                  (intercalate, isInfixOf, isSuffixOf,
-                                             sort)
+import           Data.List                  (intercalate, intersperse,
+                                             isInfixOf, isSuffixOf, sort)
 import           Data.Maybe                 (fromMaybe)
 import           Data.Monoid
 import qualified Data.Text                  as T
@@ -42,6 +42,9 @@ import           Rivet.TH
 loadProjectTemplate
 loadFile "migrationTemplate" "template/migration.hs"
 loadModelTemplate
+loadFile "modelNewHeist" "template/heist/new.tpl"
+loadFile "modelEditHeist" "template/heist/edit.tpl"
+loadFile "modelFormHeist" "template/heist/_form.tpl"
 
 init projName = liftIO $ do mapM createDirectory (fst tDirTemplate)
                             mapM_ write (snd tDirTemplate)
@@ -172,14 +175,51 @@ migrate proj conf env mode =
         formatconnect h p u ps nm = "  c <- connect (ConnectInfo " ++ w h ++ " " ++ show p ++ " " ++ w u ++ " " ++ w ps ++ " " ++ w nm ++ ")\n"
         w s = "\"" ++ s ++ "\""
 
-modelNew proj (_:nm:fields) =
+
+modelNew proj (_:nm:fields') =
   do exec $ "mkdir -p src/" ++ nm
      liftIO $ do mapM (createDirectory . addPath) (fst tModelTemplate)
                  mapM_ (uncurry writeFile . (addPath *** (replace nm))) (snd tModelTemplate)
+     let lnm = map toLower nm
+     exec $ "mkdir -p templates/" ++ lnm
+     liftIO $ writeFile ("templates" </> lnm </> "new.tpl") (replace nm modelNewHeist)
+     liftIO $ writeFile ("templates" </> lnm </> "edit.tpl") (replace nm modelEditHeist)
+     liftIO $ writeFile ("templates" </> lnm </> "_form.tpl") (replace nm modelFormHeist)
   where addPath = (("src" </> nm) </>)
+        fields = map ((\(a:b:[]) -> (a,b)) . T.splitOn ":" . T.pack) fields'
+        num = length fields
+        mfields = unws $ map (\((nm,_),var) -> ", " ++ nm ++ " :: " ++ T.pack [var])
+                             (zip fields ['b'..])
+        mtypes_f = unws $ map (\(_,ty) -> "(f " ++ ty ++ ")") fields
+        mwires = unws $ map (\(nm,_) -> "(Wire \"" ++ nm ++ "\")") fields
+        umfields = unws $ map fst fields
+        mjusts = unws $ map (\(nm,_) -> "(Just " ++ nm ++ ")") fields
+        mform = T.intercalate " <*> " $ map (\(nm,ty) -> "\"" ++ nm ++ "\" .: " ++ mkform ty) fields
+        mkform "Text" = "text Nothing"
+        mkform ty = "stringRead \"Must be a(n) " ++ ty ++ "\" Nothing"
+        meditform = T.intercalate " <*> " $
+          map (\(nm,ty) -> "\"" ++ nm ++ "\" .: " ++ mkeditform nm ty) fields
+        mkeditform nm "Text" = "text (Just " ++ nm ++ ")"
+        mkeditform nm ty = "stringRead \"Must be a(n) " ++ ty ++ "\" (Just " ++ nm ++ ")"
+        msplices = T.intercalate "\n" $
+          map (\(nm,ty) -> "     \"" ++ nm ++ "\" ## textSplice " ++ mksplice nm ty) fields
+        mksplice nm "Text" = nm
+        mksplice nm ty = "$ tshow " ++ nm
+        mdffields = T.intercalate "\n\n" $ map (\(nm,ty) -> "  <dfLabel ref=\"" ++ nm ++ "\">" ++ nm ++ "</dfLabel>\n  <dfInputText ref=\"" ++ nm ++ "\"/>") fields
+        unws = T.intercalate " "
         replace nm c = T.unpack .
                        T.replace "mODEL" (T.toLower nm') .
                        T.replace "MODEL" nm' .
+                       T.replace "MVARS" (T.pack $ intersperse ' ' $ take num ['b'..]) .
+                       T.replace "MFIELDS" mfields .
+                       T.replace "MTYPES_F" mtypes_f .
+                       T.replace "MWIRES" mwires .
+                       T.replace "mFIELDS" umfields .
+                       T.replace "mJUSTS" mjusts .
+                       T.replace "MFORM" mform .
+                       T.replace "MEDITFORM" meditform .
+                       T.replace "MSPLICES" msplices .
+                       T.replace "MDFFIELDS" mdffields .
                        T.pack $ c
           where nm' = T.pack nm
 

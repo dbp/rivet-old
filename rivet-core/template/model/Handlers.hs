@@ -17,10 +17,12 @@ import           MODEL.Types
 top :: AppHandler ()
 top = route [("new", newH)
             ,(":id", routeMODEL)]
-  where routeMODEL = do i <- getParam "id"
-                        mODEL <- require $ getById i
-                        route [("", ifTop $ showH mODEL)
-                              ]
+  where routeMODEL =
+          do i <- getParam "id"
+             mODEL <- require $ getById i
+             route [("", ifTop $ showH mODEL)
+                   ,("edit", editH mODEL)
+                   ]
 
 
 newH :: AppHandler ()
@@ -32,3 +34,10 @@ newH = do r <- runForm "new" newForm
 
 showH :: MODEL -> AppHandler ()
 showH t = renderWithSplices "mODEL/show" (splices t)
+
+editH :: MODEL -> AppHandler ()
+editH m = do r <- runForm "edit" (editForm m)
+             case r of
+               (v, Nothing) -> renderWithSplices "mODEL/edit" (digestiveSplices v)
+               (_, Just t) -> do t' <- updateMODEL t
+                                 redirect $ maybe "/" mODELPath t'

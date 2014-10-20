@@ -9,4 +9,6 @@ import           Application
 import           MODEL.Types
 
 splices :: MODEL -> Splices (Splice AppHandler)
-splices (MODEL' i) = do "id" ## textSplice $ tshow i
+splices (MODEL' i mFIELDS) =
+  do "id" ## textSplice $ tshow i
+MSPLICES

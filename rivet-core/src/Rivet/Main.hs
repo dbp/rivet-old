@@ -56,7 +56,7 @@ mainWith tasks = do
                   ("test":_) -> want ["test"]
                   ("db:new":_:[]) -> want ["db:new"]
                   ("db:new":_) -> action $ liftIO (putStrLn "usage: rivet db:new migration_name")
-                  ("model:new":[]) -> action $ liftIO (putStrLn "usage: rivet model:new model_name [field_name:field_type]*")
+                  ("model:new":[]) -> action $ liftIO (putStrLn "usage: rivet model:new ModelName [field_name:field_type]*")
                   ("model:new":_) -> want ["model:new"]
                   (target:args) ->
                     do mapM_ (\t ->
