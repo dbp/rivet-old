@@ -103,16 +103,19 @@ dbNew targets =
 
 data MigrateMode = Up | Down | Status deriving Show
 
-dbMigrate proj conf =
+dbMigrate proj conf [] =
   do liftIO $ migrate proj conf "devel" Up
      liftIO $ migrate proj conf "test" Up
+dbMigrate proj conf (env:_) = liftIO $ migrate proj conf env Up
 
-dbMigrateDown proj conf =
+dbMigrateDown proj conf [] =
   do liftIO $ migrate proj conf "devel" Down
      liftIO $ migrate proj conf "test" Down
+dbMigrateDown proj conf (env:_) = liftIO $ migrate proj conf env Down
 
-dbStatus proj conf = do liftIO $ migrate proj conf "devel" Status
-                        liftIO $ migrate proj conf "test" Status
+dbStatus proj conf [] = do liftIO $ migrate proj conf "devel" Status
+                           liftIO $ migrate proj conf "test" Status
+dbStatus proj conf (env:_) = liftIO $ migrate proj conf env Status
 
 migrate proj conf env mode =
   do dbuser <- lookupDefault (proj ++ "_user") conf "database-user"

@@ -46,5 +46,5 @@ app = makeSnaplet "app" "" Nothing $ do
     ns <- liftIO $ makeResolvSeed defaultResolvConf
     e <- getEnvironment
     addRoutes routes
-    addTemplates h "templates"
+    addTemplatesAt h "" "templates"
     return $ App h s d r ns url (T.pack e)

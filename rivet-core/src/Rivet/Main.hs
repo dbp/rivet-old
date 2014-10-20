@@ -58,6 +58,12 @@ mainWith tasks = do
                   ("db:new":_) -> action $ liftIO (putStrLn "usage: rivet db:new migration_name")
                   ("model:new":[]) -> action $ liftIO (putStrLn "usage: rivet model:new ModelName [field_name:field_type]*")
                   ("model:new":_) -> want ["model:new"]
+                  ("db:migrate":_:[]) -> want ["db:migrate"]
+                  ("db:migrate":_:_) -> action $ liftIO (putStrLn "usage: rivet db:migrate [env]")
+                  ("db:migrate:down":_:[]) -> want ["db:migrate:down"]
+                  ("db:migrate:down":_:_) -> action $ liftIO (putStrLn "usage: rivet db:migrate:down [env]")
+                  ("db:status":_:[]) -> want ["db:status"]
+                  ("db:status":_:_) -> action $ liftIO (putStrLn "usage: rivet db:status [env]")
                   (target:args) ->
                     do mapM_ (\t ->
                              if taskName t == target
@@ -81,9 +87,9 @@ mainWith tasks = do
                 "db:test" ~> Tasks.dbTest proj conf
                 "db:create" ~> Tasks.dbCreate proj conf
                 "db:new" ~> Tasks.dbNew targets
-                "db:migrate" ~> Tasks.dbMigrate proj conf
-                "db:migrate:down" ~> Tasks.dbMigrateDown proj conf
-                "db:status" ~> Tasks.dbStatus proj conf
+                "db:migrate" ~> Tasks.dbMigrate proj conf (tail targets)
+                "db:migrate:down" ~> Tasks.dbMigrateDown proj conf (tail targets)
+                "db:status" ~> Tasks.dbStatus proj conf (tail targets)
                 "model:new" ~> Tasks.modelNew proj targets
                 "repl" ~> Tasks.repl
                 "setup" ~> Tasks.setup
