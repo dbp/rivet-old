@@ -19,6 +19,7 @@ import qualified Data.Text                     as T
 import           Database.PostgreSQL.Simple    (Connection)
 import           Database.Redis                (Redis)
 import           Network.DNS.Resolver
+import           Snap.Plus.Forms
 import           Snap.Snaplet
 import           Snap.Snaplet.Heist
 import           Snap.Snaplet.PostgresqlSimple hiding (Query)

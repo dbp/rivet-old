@@ -191,6 +191,7 @@ modelNew proj (_:nm:fields') =
         mfields = unws $ map (\((nm,_),var) -> ", " ++ nm ++ " :: " ++ T.pack [var])
                              (zip fields ['b'..])
         mtypes_f = unws $ map (\(_,ty) -> "(f " ++ ty ++ ")") fields
+        mnewfields = unws $ map snd fields
         mwires = unws $ map (\(nm,_) -> "(Wire \"" ++ nm ++ "\")") fields
         umfields = unws $ map fst fields
         mjusts = unws $ map (\(nm,_) -> "(Just " ++ nm ++ ")") fields
@@ -213,6 +214,7 @@ modelNew proj (_:nm:fields') =
                        T.replace "MVARS" (T.pack $ intersperse ' ' $ take num ['b'..]) .
                        T.replace "MFIELDS" mfields .
                        T.replace "MTYPES_F" mtypes_f .
+                       T.replace "MNEWFIELDS" mnewfields .
                        T.replace "MWIRES" mwires .
                        T.replace "mFIELDS" umfields .
                        T.replace "mJUSTS" mjusts .

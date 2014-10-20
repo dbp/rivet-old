@@ -18,7 +18,7 @@ top :: AppHandler ()
 top = route [("new", newH)
             ,(":id", routeMODEL)]
   where routeMODEL =
-          do i <- getParam "id"
+          do i <- require $ getParam "id"
              mODEL <- require $ getById i
              route [("", ifTop $ showH mODEL)
                    ,("edit", editH mODEL)
@@ -39,5 +39,5 @@ editH :: MODEL -> AppHandler ()
 editH m = do r <- runForm "edit" (editForm m)
              case r of
                (v, Nothing) -> renderWithSplices "mODEL/edit" (digestiveSplices v)
-               (_, Just t) -> do t' <- updateMODEL t
-                                 redirect $ maybe "/" mODELPath t'
+               (_, Just t) -> do updateMODEL t
+                                 redirect $ mODELPath m

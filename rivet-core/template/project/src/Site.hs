@@ -6,12 +6,15 @@ module Site
   ( app, routes
   ) where
 
+import           Prelude                                     hiding ((++))
+
+import           Control.Lens
 import           Control.Monad.State
 import           Data.ByteString                             (ByteString)
 import qualified Data.Configurator                           as C
 import           Data.Monoid
+import qualified Data.Text                                   as T
 import           Network.DNS.Resolver
-import           Prelude                                     hiding ((++))
 import           Snap.Snaplet.Heist
 import           Snap.Snaplet.PostgresqlSimple.Plus
 import           Snap.Snaplet.RedisDB
@@ -22,7 +25,7 @@ import           Application
 import           Snap.Plus
 import           Snap.Plus.Splices
 
-routes :: [(ByteString, AppHandler ())]
+routes :: [(Text, AppHandler ())]
 routes = [ ("",       heistServe)
          , ("",       serveDirectory "static")
          , ("",       do modifyResponse (setResponseCode 404)
@@ -32,9 +35,7 @@ routes = [ ("",       heistServe)
 
 app :: SnapletInit App App
 app = makeSnaplet "app" "" Nothing $ do
-    h <- nestSnaplet "" heist $ heistInit' ""
-         mempty { hcLoadTimeSplices = defaultLoadTimeSplices,
-                  hcInterpretedSplices = plusSplices }
+    h <- nestSnaplet "" heist $ heistInit' "" $ set hcLoadTimeSplices defaultLoadTimeSplices $ set hcInterpretedSplices siteSplices emptyHeistConfig
     conf <- getSnapletUserConfig
     url <- liftIO (C.require conf "siteUrl")
     absPath <- liftIO (C.lookupDefault "" conf "absolutePath")

@@ -26,12 +26,12 @@ type MODELMaybe = MODEL'' Maybe
 type MODELSpec = MODEL'' (Con (Wire String))
 type MODELWire = MODEL'' Wire
 type MODELMaybeWire = MODEL'' MaybeWire
-type MODELNew = MODEL' ()
+type MODELNew = MODEL' () MNEWFIELDS
 
 $(makeAdaptorAndInstance "pMODEL" ''MODEL')
 
 mODELPath :: MODEL -> Text
-mODELPath (MODEL' i) = "/mODEL/" ++ i
+mODELPath m = "/mODEL/" ++ tshow (id m)
 
 mODELsTable :: Table MODELWire
 mODELsTable = Table "mODELs" (MODEL' (Wire "id") MWIRES)
@@ -49,6 +49,10 @@ mODELsById i = proc () ->
      restrict <<< eq -< (id mODEL, i')
      returnA -< mODEL
 
+mODELsById' :: Int -> ExprArr MODELWire (Wire Bool)
+mODELsById' i = proc m -> do i' <- econstant i -< ()
+                             eeq -< (i', id m)
+
 getById :: Int -> AppHandler (Maybe MODEL)
 getById i = listToMaybe <$> runO (mODELsById i)
 
@@ -56,10 +60,10 @@ newMODEL :: MODELNew -> AppHandler (Maybe MODEL)
 newMODEL (MODEL' _ mFIELDS) = listToMaybe <$> insOR mODELsTable insE retE
   where insE :: Expr MODELMaybeWire
         insE = makeMaybeExpr (MODEL' Nothing mJUSTS :: MODELMaybe)
-        retE :: ExprArr ListWire ListWire
+        retE :: ExprArr MODELWire MODELWire
         retE = proc mODEL -> returnA -< mODEL
 
 updateMODEL :: MODEL -> AppHandler Bool
-updateMODEL m@(MODEL' id' mFIELDS) = void $ updO mODELsTable updE (mODELsById id')
+updateMODEL m@(MODEL' id' mFIELDS) = (/= 0) <$> updO mODELsTable updE (mODELsById' id')
   where updE :: ExprArr MODELWire MODELMaybeWire
         updE = makeJustExpr m <<< arr (const ())
