@@ -61,8 +61,9 @@ runDocker proj =
      void $ exec $ "sudo docker run -w /srv -p 8000:8000 -i -t -v $PWD/docker/data:/var/lib/postgresql -v $PWD/snaplets:/srv/snaplets -v $PWD/static:/srv/static -v $PWD/src:/srv/src -v $PWD/devel.cfg:/srv/devel.cfg -v $PWD/defaults.cfg:/srv/defaults.cfg " ++ proj ++ "_devel"
 
 db proj conf = do pass <- liftIO $ require conf (T.pack "database-password")
+                  port <- liftIO $ lookupDefault 5432 conf (T.pack "database-port") :: Action Int
                   let c = "PGPASSWORD=" ++ pass ++ " psql -hlocalhost " ++ proj
-                          ++ "_devel -U" ++ proj ++ "_user"
+                          ++ "_devel -U" ++ proj ++ "_user" ++ " -p " ++ show port
                   void $ exec c
 
 dbTest proj conf = do pass <- liftIO $ require conf (T.pack "database-password")
