@@ -15,6 +15,7 @@ import qualified Data.Configurator                           as C
 import           Data.Monoid
 import qualified Data.Text                                   as T
 import           Network.DNS.Resolver
+import           Heist
 import           Snap.Snaplet.Heist
 import           Snap.Snaplet.PostgresqlSimple.Plus
 import           Snap.Snaplet.RedisDB

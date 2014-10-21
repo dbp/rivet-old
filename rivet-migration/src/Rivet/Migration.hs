@@ -49,7 +49,7 @@ invert :: Migration () -> Migration ()
 invert (Migration () ps) = Migration () (map swap ps)
 
 createTable :: Text -> [ColumnSpec] -> Migration ()
-createTable tab cols = do add ("CREATE TABLE " <> tab, "DROP TABLE " <> tab)
+createTable tab cols = do add ("CREATE TABLE " <> tab <> "()", "DROP TABLE " <> tab)
                           mapM_ (addColumn tab) cols
 
 -- NOTE(dbp 2014-10-18): To make this invertable, you need to pass in
