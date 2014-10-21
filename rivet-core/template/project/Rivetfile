@@ -1,0 +1,10 @@
+dependencies = [ "dbp/rivet+rivet-migration"
+               , "dbp/snap-plus"
+               , "dbp/snap-extras"
+               , "karamaan/karamaan-opaleye:dev"
+               , "karamaan/karamaan-plankton"
+               , "karamaan/product-profunctors"
+               , "tomjaguarpaw/haskelldb:opaleye"
+               ]
+
+database-password = "111"
