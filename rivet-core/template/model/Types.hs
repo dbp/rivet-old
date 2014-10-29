@@ -50,8 +50,9 @@ mODELsById i = proc () ->
      returnA -< mODEL
 
 mODELsById' :: Int -> ExprArr MODELWire (Wire Bool)
-mODELsById' i = proc m -> do i' <- econstant i -< ()
-                             eeq -< (i', id m)
+mODELsById' i =
+  proc m -> do i' <- econstant i -< ()
+               eeq -< (i', id m)
 
 getById :: Int -> AppHandler (Maybe MODEL)
 getById i = listToMaybe <$> runO (mODELsById i)

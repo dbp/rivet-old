@@ -12,6 +12,8 @@ import           Rivet.Common
 tasks :: [Task]
 tasks = [Task "deploy:status" 0 deployStatus ""
         ,Task "deploy:migrate" 0 deployMigrate ""
+        ,Task "deploy:migrate:status" 0 deployMigrateStatus ""
+        ,Task "deploy:migrate:down" 0 deployMigrateDown ""
         ,Task "deploy:rollout" 0 deployRollout ""
         ,Task "deploy:rollback" 1 deployRollback "SHA (short)"
         ]
@@ -23,7 +25,25 @@ deployMigrate proj conf _ =
      tag <- getDockerTag proj stageHost "stage"
      if length tag < 5
         then liftIO $ putStrLn "Couldn't get tag from staging."
-        else do let c = "docker run -w /srv -i -t -v /srv/data:/srv/data -v /var/run/postgresql/.s.PGSQL.5432:/var/run/postgresql/.s.PGSQL.5432 -v /srv/prod_" ++ tag ++ ".cfg:/srv/prod.cfg " ++ prodImage ++ ":" ++ tag ++ " migrate up prod"
+        else do let c = "docker run -w /srv -i -t -v /srv/data:/srv/data -v /var/run/postgresql/.s.PGSQL.5432:/var/run/postgresql/.s.PGSQL.5432 -v /srv/prod_" ++ tag ++ ".cfg:/srv/prod.cfg " ++ prodImage ++ ":" ++ tag ++ " rivet db:migrate prod"
+                void $ exec $ "ssh " ++ stageHost ++ " " ++ c
+
+deployMigrateStatus proj conf _ =
+  do stageHost <- liftIO $ require conf (T.pack "stage-host")
+     prodImage <- liftIO $ require conf (T.pack "production-image")
+     tag <- getDockerTag proj stageHost "stage"
+     if length tag < 5
+        then liftIO $ putStrLn "Couldn't get tag from staging."
+        else do let c = "docker run -w /srv -i -t -v /srv/data:/srv/data -v /var/run/postgresql/.s.PGSQL.5432:/var/run/postgresql/.s.PGSQL.5432 -v /srv/prod_" ++ tag ++ ".cfg:/srv/prod.cfg " ++ prodImage ++ ":" ++ tag ++ " rivet db:status prod"
+                void $ exec $ "ssh " ++ stageHost ++ " " ++ c
+
+deployMigrateDown proj conf _ =
+  do stageHost <- liftIO $ require conf (T.pack "stage-host")
+     prodImage <- liftIO $ require conf (T.pack "production-image")
+     tag <- getDockerTag proj stageHost "stage"
+     if length tag < 5
+        then liftIO $ putStrLn "Couldn't get tag from staging."
+        else do let c = "docker run -w /srv -i -t -v /srv/data:/srv/data -v /var/run/postgresql/.s.PGSQL.5432:/var/run/postgresql/.s.PGSQL.5432 -v /srv/prod_" ++ tag ++ ".cfg:/srv/prod.cfg " ++ prodImage ++ ":" ++ tag ++ " rivet db:migrate:down prod"
                 void $ exec $ "ssh " ++ stageHost ++ " " ++ c
 
 deployStatus proj conf _ =

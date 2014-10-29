@@ -19,7 +19,7 @@ Executable project
   main-is: Main.hs
 
   Build-depends: base                        >= 4       && < 5
-               , heist                       >= 0.13    && < 0.14
+               , heist                       >= 0.14    && < 0.15
                , containers                  >= 0.5     && < 0.6
                , unordered-containers        >= 0.2     && < 0.3
                , time                        >= 1.1     && < 1.5
