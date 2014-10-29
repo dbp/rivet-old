@@ -124,7 +124,8 @@ migrate proj conf env mode =
      dbpass <- require conf "database-password"
      dbhost <- lookupDefault "127.0.0.1" conf "database-host"
      dbport <- lookupDefault 5432 conf "database-port"
-     c <- connect (ConnectInfo dbhost dbport dbuser dbpass (proj ++ "_" ++ env))
+     dbname <- lookupDefault (proj ++ "_" ++ env) conf "database-name"
+     c <- connect (ConnectInfo dbhost dbport dbuser dbpass dbname)
      execute_ c "CREATE TABLE IF NOT EXISTS migrations (name text NOT NULL PRIMARY KEY, run_at timestamptz NOT NULL DEFAULT now())"
      tmp <- getTemporaryDirectory
      now <- getCurrentTime
@@ -141,7 +142,7 @@ migrate proj conf env mode =
                       "import Database.PostgreSQL.Simple\nimport Rivet.Migration\n" ++
                       (unlines $ map createImport missing) ++
                       "\nmain = do\n" ++
-                      (formatconnect dbhost dbport dbuser dbpass (proj ++ "_" ++ env)) ++
+                      (formatconnect dbhost dbport dbuser dbpass dbname) ++
                       (unlines $ map (createRun mode) missing)
        Down -> do toDown <- dropWhileM (notExists c) $ reverse migrations
                   case toDown of
