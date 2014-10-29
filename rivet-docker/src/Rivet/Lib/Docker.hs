@@ -12,30 +12,31 @@ tasks = [Task "run:docker" 0 runDocker ""
         ,Task "db:status:docker" 0 dbStatusDocker ""
         ]
 
-
+-- NOTE(dbp 2014-10-29): Have directories we want to bind be in
+-- Rivetfile... In particular, templates and emails are not general...
 runDocker proj _ _ =
   do exec "ln -sf docker/Dockerfile.development Dockerfile"
      exec $ "sudo docker build -t " ++ proj ++ "_devel ."
      exec "rm Dockerfile"
-     void $ exec $ "sudo docker run -w /srv -p 8000:8000 -i -t -v $PWD/docker/data:/var/lib/postgresql -v $PWD/snaplets:/srv/snaplets -v $PWD/static:/srv/static -v $PWD/src:/srv/src -v $PWD/devel.cfg:/srv/devel.cfg -v $PWD/defaults.cfg:/srv/defaults.cfg " ++ proj ++ "_devel"
+     void $ exec $ "sudo docker run -w /srv -p 8000:8000 -i -t -v $PWD/docker/data:/var/lib/postgresql -v $PWD/snaplets:/srv/snaplets -v $PWD/templates:/srv/templates -v $PWD/emails:/srv/emails -v $PWD/static:/srv/static -v $PWD/src:/srv/src -v $PWD/devel.cfg:/srv/devel.cfg -v $PWD/defaults.cfg:/srv/defaults.cfg " ++ proj ++ "_devel"
 
 dbMigrateDocker proj _ _ =
-  do exec "ln -sf docker/Dockerfile.migrate Dockerfile"
-     exec $ "sudo docker build -t " ++ proj ++ "_migrate ."
+  do exec "ln -sf docker/Dockerfile.development Dockerfile"
+     exec $ "sudo docker build -t " ++ proj ++ "_devel ."
      exec "rm Dockerfile"
-     void $ exec $ "sudo docker run -w /srv -i -t -e \"MODE=up\" -v $PWD/docker/data:/var/lib/postgresql "
-                   ++ proj ++ "_migrate"
+     void $ exec $ "sudo docker run -w /srv -i -t -v $PWD/docker/data:/var/lib/postgresql "
+                   ++ proj ++ "_devel rivet db:migrate"
 
 dbMigrateDownDocker proj _ _ =
-  do exec "ln -sf docker/Dockerfile.migrate Dockerfile"
-     exec $ "sudo docker build -t " ++ proj ++ "_migrate ."
+  do exec "ln -sf docker/Dockerfile.development Dockerfile"
+     exec $ "sudo docker build -t " ++ proj ++ "_devel ."
      exec "rm Dockerfile"
-     void $ exec $ "sudo docker run -w /srv -i -t -e \"MODE=down\" -v $PWD/docker/data:/var/lib/postgresql "
-                    ++ proj ++ "_migrate"
+     void $ exec $ "sudo docker run -w /srv -i -t -v $PWD/docker/data:/var/lib/postgresql "
+                   ++ proj ++ "_devel rivet db:migrate:down"
 
 dbStatusDocker proj _ _ =
-  do exec "ln -sf docker/Dockerfile.migrate Dockerfile"
-     exec $ "sudo docker build -t " ++ proj ++ "_migrate ."
+  do exec "ln -sf docker/Dockerfile.development Dockerfile"
+     exec $ "sudo docker build -t " ++ proj ++ "_devel ."
      exec "rm Dockerfile"
-     void $ exec $ "sudo docker run -w /srv -i -t -e \"MODE=status\" -v $PWD/docker/data:/var/lib/postgresql "
-                   ++ proj ++ "_migrate"
+     void $ exec $ "sudo docker run -w /srv -i -t -v $PWD/docker/data:/var/lib/postgresql "
+                   ++ proj ++ "_devel rivet db:status"
