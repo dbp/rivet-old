@@ -25,7 +25,7 @@ deployMigrate proj conf _ =
      tag <- getDockerTag proj stageHost "stage"
      if length tag < 5
         then liftIO $ putStrLn "Couldn't get tag from staging."
-        else do let c = "docker run -w /srv -i -t -v /srv/data:/srv/data -v /var/run/postgresql/.s.PGSQL.5432:/var/run/postgresql/.s.PGSQL.5432 -v /srv/prod_" ++ tag ++ ".cfg:/srv/prod.cfg " ++ prodImage ++ ":" ++ tag ++ " rivet db:migrate prod"
+        else do let c = "docker run -w /srv -i -t -v /srv/data:/srv/data -v /var/run/postgresql/.s.PGSQL.5432:/var/run/postgresql/.s.PGSQL.5432 -v /srv/prod_" ++ tag ++ ".cfg:/srv/Rivetfile " ++ prodImage ++ ":" ++ tag ++ " rivet db:migrate prod"
                 void $ exec $ "ssh " ++ stageHost ++ " " ++ c
 
 deployMigrateStatus proj conf _ =
@@ -34,7 +34,7 @@ deployMigrateStatus proj conf _ =
      tag <- getDockerTag proj stageHost "stage"
      if length tag < 5
         then liftIO $ putStrLn "Couldn't get tag from staging."
-        else do let c = "docker run -w /srv -i -t -v /srv/data:/srv/data -v /var/run/postgresql/.s.PGSQL.5432:/var/run/postgresql/.s.PGSQL.5432 -v /srv/prod_" ++ tag ++ ".cfg:/srv/prod.cfg " ++ prodImage ++ ":" ++ tag ++ " rivet db:status prod"
+        else do let c = "docker run -w /srv -i -t -v /srv/data:/srv/data -v /var/run/postgresql/.s.PGSQL.5432:/var/run/postgresql/.s.PGSQL.5432 -v /srv/prod_" ++ tag ++ ".cfg:/srv/Rivetfile " ++ prodImage ++ ":" ++ tag ++ " rivet db:status prod"
                 void $ exec $ "ssh " ++ stageHost ++ " " ++ c
 
 deployMigrateDown proj conf _ =
@@ -43,7 +43,7 @@ deployMigrateDown proj conf _ =
      tag <- getDockerTag proj stageHost "stage"
      if length tag < 5
         then liftIO $ putStrLn "Couldn't get tag from staging."
-        else do let c = "docker run -w /srv -i -t -v /srv/data:/srv/data -v /var/run/postgresql/.s.PGSQL.5432:/var/run/postgresql/.s.PGSQL.5432 -v /srv/prod_" ++ tag ++ ".cfg:/srv/prod.cfg " ++ prodImage ++ ":" ++ tag ++ " rivet db:migrate:down prod"
+        else do let c = "docker run -w /srv -i -t -v /srv/data:/srv/data -v /var/run/postgresql/.s.PGSQL.5432:/var/run/postgresql/.s.PGSQL.5432 -v /srv/prod_" ++ tag ++ ".cfg:/srv/Rivetfile " ++ prodImage ++ ":" ++ tag ++ " rivet db:migrate:down prod"
                 void $ exec $ "ssh " ++ stageHost ++ " " ++ c
 
 deployStatus proj conf _ =
