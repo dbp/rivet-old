@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Rivet.Migration where
+module Rivet.Migration.V0 where
 
 import           Control.Applicative
 import           Data.Maybe
