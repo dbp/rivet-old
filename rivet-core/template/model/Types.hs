@@ -31,7 +31,7 @@ type MODELNew = MODEL' () MNEWFIELDS
 $(makeAdaptorAndInstance "pMODEL" ''MODEL')
 
 mODELPath :: MODEL -> Text
-mODELPath m = "/mODEL/" ++ tshow (id m)
+mODELPath m = "/mODELs/" ++ tshow (id m)
 
 mODELsTable :: Table MODELWire
 mODELsTable = Table "mODELs" (MODEL' (Wire "id") MWIRES)

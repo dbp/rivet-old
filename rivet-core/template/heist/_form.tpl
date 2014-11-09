@@ -1,6 +1,6 @@
 <dfForm method="POST">
 
-  <dfChildErrors ref=""/>
+  <dfChildErrorList ref=""/>
 
 MDFFIELDS
 
