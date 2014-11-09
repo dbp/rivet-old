@@ -19,11 +19,13 @@ import qualified Data.Text                  as T
 import           Data.Time.Clock
 import           Data.Time.Format
 import           Database.PostgreSQL.Simple
-import           Development.Shake          hiding (getDirectoryContents)
+import           Development.Shake          hiding (doesDirectoryExist,
+                                             getDirectoryContents)
 import           Prelude                    hiding ((++))
 import           System.Console.GetOpt
 import           System.Directory           (copyFile, createDirectory,
                                              createDirectoryIfMissing,
+                                             doesDirectoryExist,
                                              getCurrentDirectory,
                                              getDirectoryContents,
                                              getTemporaryDirectory, removeFile)
@@ -46,11 +48,22 @@ loadFile "modelNewHeist" "template/heist/new.tpl"
 loadFile "modelEditHeist" "template/heist/edit.tpl"
 loadFile "modelFormHeist" "template/heist/_form.tpl"
 
-init projName = liftIO $ do mapM createDirectory (fst tDirTemplate)
-                            mapM_ write (snd tDirTemplate)
-  where write (f,c) = if isSuffixOf "project.cabal" f
-                      then writeFile (projName ++ ".cabal") (insertProjName c)
-                      else writeFile f c
+init projName = do liftIO $ do mapM createDirectory' (fst tDirTemplate)
+                               mapM_ write (snd tDirTemplate)
+                   hasGit <- liftIO $ doesDirectoryExist ".git"
+                   if hasGit
+                      then liftIO $ putStrLn "detected existing .git directory, not committing."
+                      else do void $ exec "git init"
+                              void $ exec "git add ."
+                              void $ exec "git commit -m 'initial commit'"
+  where createDirectory' d = do putStrLn $ "creating " ++ d
+                                createDirectory d
+        writeFile' f c = do putStrLn $ "writing " ++ f
+                            writeFile f c
+        write (f,c) =
+          if isSuffixOf "project.cabal" f
+          then writeFile' (projName ++ ".cabal") (insertProjName c)
+          else writeFile' f (replace "PROJECT" projName c)
         isNameChar c = isAlphaNum c || c == '-'
         insertProjName c = replace "project" (filter isNameChar projName) c
 
