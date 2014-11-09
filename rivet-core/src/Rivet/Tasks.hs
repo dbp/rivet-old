@@ -54,6 +54,8 @@ loadModelTemplate
 loadFile "modelNewHeist" "template/heist/new.tpl"
 loadFile "modelEditHeist" "template/heist/edit.tpl"
 loadFile "modelFormHeist" "template/heist/_form.tpl"
+loadFile "modelShowHeist" "template/heist/show.tpl"
+loadFile "modelIndexHeist" "template/heist/index.tpl"
 
 init projName = do liftIO $ do mapM createDirectory' (fst tDirTemplate)
                                mapM_ write (snd tDirTemplate)
@@ -66,7 +68,7 @@ init projName = do liftIO $ do mapM createDirectory' (fst tDirTemplate)
   where write (f,c) =
           if isSuffixOf "project.cabal" f
           then writeFile' (projName ++ ".cabal") (insertProjName c)
-          else writeFile' f (replace "PROJECT" projName c)
+          else writeFile' f (replace "PROJECT" (dbIfy projName) c)
         isNameChar c = isAlphaNum c || c == '-'
         insertProjName c = replace "project" (filter isNameChar projName) c
 
@@ -222,7 +224,12 @@ modelNew proj (_:nm:fields') =
      liftIO $ writeFile' ("templates" </> lnm </> "new.tpl") (replace nm modelNewHeist)
      liftIO $ writeFile' ("templates" </> lnm </> "edit.tpl") (replace nm modelEditHeist)
      liftIO $ writeFile' ("templates" </> lnm </> "_form.tpl") (replace nm modelFormHeist)
+     liftIO $ writeFile' ("templates" </> lnm </> "show.tpl") (replace nm modelShowHeist)
+     liftIO $ writeFile' ("templates" </> lnm </> "index.tpl") (replace nm modelIndexHeist)
      liftIO $ genMigration ("add_" ++ lnm) migr
+     liftIO $ putStrLn $ "\nNOTE: While handlers have been created (with top level at " ++ nm ++ ".Handlers.top),\n \
+                         \they have not been added to the routes in src/Site.hs. You can put them anywhere,\n \
+                         \but some of the templates assume that the top handler will exist at /" ++ lnm ++ "."
   where lnm = map toLower nm
         addPath = (("src" </> nm) </>)
         fields = map ((\(a:b:[]) -> (a,b)) . T.splitOn ":" . T.pack) fields'
@@ -274,7 +281,7 @@ modelNew proj (_:nm:fields') =
         toSql "Integer" = "bigint"
         toSql "UTCTime" = "timestamptz"
         toSql t = error $ "I don't know how to deal with columns of type " ++ T.unpack t ++ " yet."
-        migr = "createTable \"" ++ lnm ++ "\" [" ++ T.unpack colspecs ++ "]"
+        migr = "createTable \"" ++ lnm ++ "s\" [" ++ T.unpack colspecs ++ "]"
 
 
 repl = void (exec "cabal repl")

@@ -3,6 +3,7 @@ module MODEL.Handlers where
 
 import           Prelude              hiding ((++))
 
+import           Heist
 import           Snap.Plus
 import           Snap.Snaplet.Heist
 import           Text.Digestive
@@ -15,7 +16,8 @@ import           MODEL.Splices
 import           MODEL.Types
 
 top :: AppHandler ()
-top = route [("new", newH)
+top = route [("", ifTop indexH)
+            ,("new", newH)
             ,(":id", routeMODEL)]
   where routeMODEL =
           do i <- require $ getParam "id"
@@ -24,6 +26,9 @@ top = route [("new", newH)
                    ,("edit", editH mODEL)
                    ]
 
+indexH :: AppHandler ()
+indexH = do mODELs <- getAllMODELs
+            renderWithSplices "mODEL/index" ("mODELs" ## splicesMany mODELs)
 
 newH :: AppHandler ()
 newH = do r <- runForm "new" newForm

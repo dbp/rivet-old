@@ -16,16 +16,16 @@ most cases you'll never need to modify this code.
 module Main where
 
 ------------------------------------------------------------------------------
-import           Control.Exception (SomeException, try)
-import qualified Data.Text as T
+import           Control.Exception   (SomeException, try)
+import qualified Data.Text           as T
+import           Site
+import           Snap.Core
 import           Snap.Http.Server
+import           Snap.Plus
 import           Snap.Snaplet
 import           Snap.Snaplet.Config
-import           Snap.Core
-import           System.Environment (lookupEnv)
+import           System.Environment  (lookupEnv)
 import           System.IO
-import           Site
-import           Snap.Plus
 
 #ifdef DEVELOPMENT
 import           Snap.Loader.Dynamic
@@ -76,7 +76,7 @@ main = do
     -- directories, those are picked up automatically by the splice.
     (conf, site, cleanup) <- $(loadSnapTH [| getConf |]
                                           'getActions
-                                          ["snaplets/heist/templates"])
+                                          ["templates"])
     portS <- lookupEnv "PORT"
     let conf' = case portS >>= readSafe . T.pack  of
                   Nothing -> conf
