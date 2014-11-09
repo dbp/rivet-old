@@ -23,7 +23,12 @@ data Direction = Up | Down
 
 run :: String -> Connection -> Direction -> Migration () -> IO ()
 run nm conn dir m =
-  do mapM_ (\p -> execute_ conn (fromString . T.unpack $ pick dir p)) (migSteps m)
+  do mapM_ (\p -> do let str = T.unpack $ pick dir p
+                     case str of
+                       "" -> return ()
+                       _ -> do execute_ conn (fromString str)
+                               putStrLn str)
+           (migSteps m)
      case dir of
        Up -> execute conn "INSERT INTO migrations (name) values (?)" (Only nm)
        Down -> execute conn "DELETE FROM migrations WHERE name = ?" (Only nm)
@@ -48,9 +53,12 @@ add p = Migration () [p]
 invert :: Migration () -> Migration ()
 invert (Migration () ps) = Migration () (map swap ps)
 
+stripDown :: Migration () -> Migration ()
+stripDown (Migration () ps) = Migration () (map (\(a,_) -> (a,"")) ps)
+
 createTable :: Text -> [ColumnSpec] -> Migration ()
 createTable tab cols = do add ("CREATE TABLE " <> tab <> "()", "DROP TABLE " <> tab)
-                          mapM_ (addColumn tab) cols
+                          stripDown $ mapM_ (addColumn tab) cols
 
 -- NOTE(dbp 2014-10-18): To make this invertable, you need to pass in
 -- the spec for how the table should be recreated. Obviously this is

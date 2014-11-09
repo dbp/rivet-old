@@ -15,12 +15,14 @@ import           Data.List                  (intercalate, intersperse,
                                              isInfixOf, isSuffixOf, sort)
 import           Data.Maybe                 (fromMaybe)
 import           Data.Monoid
+import           Data.Text                  (Text)
 import qualified Data.Text                  as T
 import           Data.Time.Clock
 import           Data.Time.Format
 import           Database.PostgreSQL.Simple
-import           Development.Shake          hiding (doesDirectoryExist,
-                                             getDirectoryContents)
+import           Development.Shake          hiding (createDirectory',
+                                             doesDirectoryExist,
+                                             getDirectoryContents, writeFile')
 import           Prelude                    hiding ((++))
 import           System.Console.GetOpt
 import           System.Directory           (copyFile, createDirectory,
@@ -40,6 +42,11 @@ import           System.Process
 import           Rivet.Common
 import           Rivet.TH
 
+createDirectory' d = do putStrLn $ "creating " ++ d
+                        createDirectory d
+writeFile' f c = do putStrLn $ "writing " ++ f
+                    writeFile f c
+
 -- NOTE(dbp 2014-09-27): These calls load in files from disk using TH.
 loadProjectTemplate
 loadFile "migrationTemplate" "template/migration.hs"
@@ -56,11 +63,7 @@ init projName = do liftIO $ do mapM createDirectory' (fst tDirTemplate)
                       else do void $ exec "git init"
                               void $ exec "git add ."
                               void $ exec "git commit -m 'initial commit'"
-  where createDirectory' d = do putStrLn $ "creating " ++ d
-                                createDirectory d
-        writeFile' f c = do putStrLn $ "writing " ++ f
-                            writeFile f c
-        write (f,c) =
+  where write (f,c) =
           if isSuffixOf "project.cabal" f
           then writeFile' (projName ++ ".cabal") (insertProjName c)
           else writeFile' f (replace "PROJECT" projName c)
@@ -116,12 +119,19 @@ dbCreate proj conf =
 
 dbNew targets =
   do let name = head (tail targets)
-     now <- liftIO getCurrentTime
+     liftIO $ genMigration name sqlud
+  where sqlud = "sql up down\n\n\
+                \up = \"\"\n\
+                 \\n\
+                 \down = \"\""
+
+genMigration name content =
+  do now <- getCurrentTime
      let modname = (formatTime defaultTimeLocale "M%Y%m%d%H%M%S_" now) ++ name
          str = modname ++ ".hs"
-     liftIO $ putStrLn $ "Writing to migrations/" ++ str ++ "..."
-     liftIO $ writeFile ("migrations/" ++ str)
-                        (replace "MIGRATION_MODULE" modname migrationTemplate)
+     putStrLn $ "Writing to migrations/" ++ str ++ "..."
+     writeFile ("migrations/" ++ str)
+         (replace "MIGRATION_MODULE" modname . replace "CONTENT" content $ migrationTemplate)
 
 data MigrateMode = Up | Down | Status deriving Show
 
@@ -140,50 +150,52 @@ dbStatus proj conf [] = do liftIO $ migrate proj conf "devel" Status
 dbStatus proj conf (env:_) = liftIO $ migrate proj conf env Status
 
 migrate proj conf env mode =
-  do dbuser <- lookupDefault (proj ++ "_user") conf "database-user"
+  do dbuser <- lookupDefault (dbIfy proj ++ "_user") conf "database-user"
      dbpass <- require conf "database-password"
      dbhost <- lookupDefault "127.0.0.1" conf "database-host"
      dbport <- lookupDefault 5432 conf "database-port"
-     dbname <- lookupDefault (proj ++ "_" ++ env) conf "database-name"
+     dbname <- lookupDefault (dbIfy proj ++ "_" ++ env) conf "database-name"
      c <- connect (ConnectInfo dbhost dbport dbuser dbpass dbname)
      execute_ c "CREATE TABLE IF NOT EXISTS migrations (name text NOT NULL PRIMARY KEY, run_at timestamptz NOT NULL DEFAULT now())"
      tmp <- getTemporaryDirectory
      now <- getCurrentTime
      let main = tmp ++ "/migrate_" ++ formatTime defaultTimeLocale "%Y%m%d%H%M%S_" now ++ env ++ ".hs"
-     putStrLn $ "Writing migration script to " ++ main ++ "..."
      migrations <- sort . map stripSuffix . filter isCode <$>
                    getDirectoryContents "migrations"
-     case mode of
-       Up ->
-         do missing <- filterM (notExists c) migrations
-            if null missing
-               then putStrLn "No migrations to run."
-               else writeFile main $
-                      "import Database.PostgreSQL.Simple\nimport Rivet.Migration\n" ++
-                      (unlines $ map createImport missing) ++
-                      "\nmain = do\n" ++
-                      (formatconnect dbhost dbport dbuser dbpass dbname) ++
-                      (unlines $ map (createRun mode) missing)
-       Down -> do toDown <- dropWhileM (notExists c) $ reverse migrations
-                  case toDown of
-                    (x:_) -> writeFile main $
-                               "import Database.PostgreSQL.Simple\nimport Rivet.Migration\n" ++
-                               createImport x ++
-                               "\nmain = do\n" ++
-                               (formatconnect dbhost dbport dbuser dbpass (proj ++ "_" ++ env)) ++
-                               createRun mode x
-                    _ -> putStrLn "No migrations remaining."
-       Status -> mapM_ (\m -> do ne <- notExists c m
-                                 if ne
-                                    then putStrLn $ m ++ " in " ++ env
-                                    else putStrLn $ " APPLIED " ++ m ++ " in " ++ env)
-                       migrations
-     case mode of
-       Status -> return ()
-       _ -> do putStrLn $ "Running " ++ main ++ "..."
-               system $ "cabal exec -- runghc -isrc -imigrations " ++ main
-               putStrLn $ "Cleaning up... "
-               removeFile main
+     run <- case mode of
+              Up ->
+                do missing <- filterM (notExists c) migrations
+                   if null missing
+                      then putStrLn "No migrations to run." >> return False
+                      else do putStrLn $ "Writing migration script to " ++ main ++ "..."
+                              writeFile main $
+                                "import Database.PostgreSQL.Simple\nimport Rivet.Migration\n" ++
+                                (unlines $ map createImport missing) ++
+                                "\nmain = do\n" ++
+                                (formatconnect dbhost dbport dbuser dbpass dbname) ++
+                                (unlines $ map (createRun mode) missing)
+                              return True
+              Down -> do toDown <- dropWhileM (notExists c) $ reverse migrations
+                         case toDown of
+                           (x:_) -> do putStrLn $ "Writing migration script to " ++ main ++ "..."
+                                       writeFile main $
+                                         "import Database.PostgreSQL.Simple\nimport Rivet.Migration\n" ++
+                                         createImport x ++
+                                         "\nmain = do\n" ++
+                                         (formatconnect dbhost dbport dbuser dbpass dbname) ++
+                                         createRun mode x
+                                       return True
+                           _ -> putStrLn "No migrations remaining." >> return False
+              Status -> do mapM_ (\m -> do ne <- notExists c m
+                                           if ne
+                                              then putStrLn $ m ++ " in " ++ env
+                                              else putStrLn $ " APPLIED " ++ m ++ " in " ++ env)
+                                 migrations
+                           return False
+     when run $ do putStrLn $ "Running " ++ main ++ "..."
+                   system $ "cabal exec -- runghc -isrc -imigrations " ++ main
+                   putStrLn $ "Cleaning up... "
+                   removeFile main
   where stripSuffix = reverse . drop 3 . reverse
         isCode = isSuffixOf ".hs"
         dropWhileM :: Monad m => (a -> m Bool) -> [a] -> m [a]
@@ -197,21 +209,22 @@ migrate proj conf env mode =
         getMigration :: Connection -> String -> IO [(Only String)]
         getMigration c m = query c "SELECT name FROM migrations WHERE name = ?" (Only m)
         createImport m = "import qualified " ++ m
-        createRun mode m = "  run " ++ w m ++ " c " ++ show mode ++ " " ++ m ++ ".migrate"
+        createRun mode m = "  run " ++ w m ++ " c " ++ show mode ++ " " ++ m ++ ".migrate >> putStrLn \"Ran " ++ m ++ "\""
         formatconnect h p u ps nm = "  c <- connect (ConnectInfo " ++ w h ++ " " ++ show p ++ " " ++ w u ++ " " ++ w ps ++ " " ++ w nm ++ ")\n"
         w s = "\"" ++ s ++ "\""
 
 
 modelNew proj (_:nm:fields') =
   do exec $ "mkdir -p src/" ++ nm
-     liftIO $ do mapM (createDirectory . addPath) (fst tModelTemplate)
-                 mapM_ (uncurry writeFile . (addPath *** (replace nm))) (snd tModelTemplate)
-     let lnm = map toLower nm
+     liftIO $ do mapM (createDirectory' . addPath) (fst tModelTemplate)
+                 mapM_ (uncurry writeFile' . (addPath *** (replace nm))) (snd tModelTemplate)
      exec $ "mkdir -p templates/" ++ lnm
-     liftIO $ writeFile ("templates" </> lnm </> "new.tpl") (replace nm modelNewHeist)
-     liftIO $ writeFile ("templates" </> lnm </> "edit.tpl") (replace nm modelEditHeist)
-     liftIO $ writeFile ("templates" </> lnm </> "_form.tpl") (replace nm modelFormHeist)
-  where addPath = (("src" </> nm) </>)
+     liftIO $ writeFile' ("templates" </> lnm </> "new.tpl") (replace nm modelNewHeist)
+     liftIO $ writeFile' ("templates" </> lnm </> "edit.tpl") (replace nm modelEditHeist)
+     liftIO $ writeFile' ("templates" </> lnm </> "_form.tpl") (replace nm modelFormHeist)
+     liftIO $ genMigration ("add_" ++ lnm) migr
+  where lnm = map toLower nm
+        addPath = (("src" </> nm) </>)
         fields = map ((\(a:b:[]) -> (a,b)) . T.splitOn ":" . T.pack) fields'
         num = length fields
         mfields = unws $ map (\((nm,_),var) -> ", " ++ nm ++ " :: " ++ T.pack [var])
@@ -250,6 +263,18 @@ modelNew proj (_:nm:fields') =
                        T.replace "MDFFIELDS" mdffields .
                        T.pack $ c
           where nm' = T.pack nm
+        colspecs = T.intercalate ", " $
+                   ("ColumnSpec \"id\" \"serial\" Nothing (Just \"PRIMARY KEY\")") :
+                   (map (\(fld, ty) -> "ColumnSpec \"" <> fld <> "\" \"" <>
+                                                  toSql ty <> "\" Nothing Nothing")
+                       fields)
+        toSql :: Text -> Text
+        toSql "Text" = "text"
+        toSql "Int" = "int"
+        toSql "Integer" = "bigint"
+        toSql "UTCTime" = "timestamptz"
+        toSql t = error $ "I don't know how to deal with columns of type " ++ T.unpack t ++ " yet."
+        migr = "createTable \"" ++ lnm ++ "\" [" ++ T.unpack colspecs ++ "]"
 
 
 repl = void (exec "cabal repl")
