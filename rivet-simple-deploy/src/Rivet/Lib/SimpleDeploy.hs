@@ -16,6 +16,7 @@ tasks = [Task "deploy:status" 0 deployStatus ""
         ,Task "deploy:migrate:down" 0 deployMigrateDown ""
         ,Task "deploy:rollout" 0 deployRollout ""
         ,Task "deploy:rollback" 1 deployRollback "SHA (short)"
+        ,Task "deploy:stage" 1 deployStage "SHA (short)"
         ]
 
 
@@ -79,3 +80,10 @@ deployRollback proj conf (tag:_) =
      liftIO $ putStrLn $ "Rolling back to " ++ tag ++ "..."
      exec $ "git rev-list --format=%B --max-count=1 " ++ tag
      void $ exec $ "ssh " ++ prodHost ++ " /srv/deploy.sh " ++ proj ++ " prod " ++ prodImage ++ " " ++ tag ++ " " ++ (show prodInstances)
+
+deployStage proj conf (tag:_) =
+  do stageHost <- liftIO $ require conf (T.pack "stage-host")
+     prodImage <- liftIO $ require conf (T.pack "production-image")
+     liftIO $ putStrLn $ "Deploying stage to " ++ tag ++ "..."
+     exec $ "git rev-list --format=%B --max-count=1 " ++ tag
+     void $ exec $ "ssh " ++ stageHost ++ " /srv/deploy.sh " ++ proj ++ " stage " ++ prodImage ++ " " ++ tag ++ " 1"
