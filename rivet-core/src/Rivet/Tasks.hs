@@ -62,37 +62,44 @@ run proj =
      need [binary]
      void $ exec binary
 
+dbIfy = T.unpack . T.replace "-" "_" . T.pack
+
 db proj conf = do pass <- liftIO $ require conf (T.pack "database-password")
                   port <- liftIO $ lookupDefault 5432 conf (T.pack "database-port") :: Action Int
-                  let c = "PGPASSWORD=" ++ pass ++ " psql -hlocalhost " ++ proj
-                          ++ "_devel -U" ++ proj ++ "_user" ++ " -p " ++ show port
+                  user <- liftIO $ lookupDefault (dbIfy proj ++ "_user") conf (T.pack "database-user")
+                  let c = "PGPASSWORD=" ++ pass ++ " psql -hlocalhost " ++ dbIfy proj
+                          ++ "_devel -U" ++ user ++ " -p " ++ show port
                   void $ exec c
 
-dbTest proj conf = do pass <- liftIO $ require conf (T.pack "database-password")
-                      port <- liftIO $ lookupDefault 5432 conf (T.pack "database-port") :: Action Int
-                      let c = "PGPASSWORD=" ++ pass ++ " psql " ++ proj
-                              ++ "_test -U" ++ proj ++ "_user" ++ " -hlocalhost" ++ " -p " ++ show port
-                      void $ exec c
+dbTest proj conf =
+  do pass <- liftIO $ require conf (T.pack "database-password")
+     port <- liftIO $ lookupDefault 5432 conf (T.pack "database-port") :: Action Int
+     user <- liftIO $ lookupDefault (dbIfy proj ++ "_user") conf (T.pack "database-user")
+     let c = "PGPASSWORD=" ++ pass ++ " psql " ++ dbIfy proj
+             ++ "_test -U" ++ user ++ " -hlocalhost" ++ " -p " ++ show port
+     void $ exec c
 
 test targets =
   void (exec $ "cabal exec -- runghc -isrc spec/Main.hs -m \"" ++ (intercalate " " (tail targets) ++ "\""))
 
 dbCreate proj conf =
   do pass <- liftIO $ require conf (T.pack "database-password")
-     code <- exec $ "PGPASSWORD=" ++ pass ++ " psql -hlocalhost -U" ++ proj ++ "_user template1 -c 'SELECT 1'"
+     user <- liftIO $ lookupDefault (dbIfy proj ++ "_user") conf (T.pack "database-user")
+     let dbname = dbIfy proj
+     code <- exec $ "PGPASSWORD=" ++ pass ++ " psql -hlocalhost -U" ++ user ++ " template1 -c 'SELECT 1'"
      isSuper <- case code of
-                  ExitFailure _ -> do void $ exec $ "sudo -u postgres psql template1 -c \"CREATE USER " ++ proj ++ "_user WITH SUPERUSER PASSWORD '" ++ pass ++ "'\""
+                  ExitFailure _ -> do void $ exec $ "sudo -u postgres psql template1 -c \"CREATE USER " ++ user ++ " WITH SUPERUSER PASSWORD '" ++ pass ++ "'\""
                                       return True
-                  ExitSuccess -> do res <- readExec $ "psql -hlocalhost -U" ++ proj ++ "_user template1 -c \"SELECT current_setting('is_superuser')\""
+                  ExitSuccess -> do res <- readExec $ "psql -hlocalhost -U" ++ user ++ " template1 -c \"SELECT current_setting('is_superuser')\""
                                     return ("on" `isInfixOf` res)
      if isSuper
-        then do exec $ "PGPASSWORD=" ++ pass ++ " psql -hlocalhost -U" ++ proj ++ "_user template1 -c \"CREATE DATABASE " ++ proj ++ "_devel\""
-                exec $ "PGPASSWORD=" ++ pass ++ " psql -hlocalhost -U" ++ proj ++ "_user template1 -c \"CREATE DATABASE " ++ proj ++ "_test\""
+        then do exec $ "PGPASSWORD=" ++ pass ++ " psql -hlocalhost -U" ++ user ++ " template1 -c \"CREATE DATABASE " ++ dbname ++ "_devel\""
+                exec $ "PGPASSWORD=" ++ pass ++ " psql -hlocalhost -U" ++ user ++ " template1 -c \"CREATE DATABASE " ++ dbname ++ "_test\""
                 return ()
-        else do void $ exec $ "sudo -u postgres psql template1 -c \"CREATE DATABASE " ++ proj ++ "_devel\""
-                void $ exec $ "sudo -u postgres psql template1 -c \"CREATE DATABASE " ++ proj ++ "_test\""
-                void $ exec $ "sudo -u postgres psql template1 -c \"GRANT ALL ON DATABASE " ++ proj ++ "_devel TO " ++ proj ++ "_user\""
-                void $ exec $ "sudo -u postgres psql template1 -c \"GRANT ALL ON DATABASE " ++ proj ++ "_test TO " ++ proj ++ "_user\""
+        else do void $ exec $ "sudo -u postgres psql template1 -c \"CREATE DATABASE " ++ dbname ++ "_devel\""
+                void $ exec $ "sudo -u postgres psql template1 -c \"CREATE DATABASE " ++ dbname ++ "_test\""
+                void $ exec $ "sudo -u postgres psql template1 -c \"GRANT ALL ON DATABASE " ++ dbname ++ "_devel TO " ++ user ++ "\""
+                void $ exec $ "sudo -u postgres psql template1 -c \"GRANT ALL ON DATABASE " ++ dbname ++ "_test TO " ++ user ++ "\""
 
 dbNew targets =
   do let name = head (tail targets)
