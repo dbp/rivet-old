@@ -1,5 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Rivet.Migration.V0 where
+module Rivet.Migration.V0 (
+    Migration
+  , createTable
+  , dropTable
+  , renameColumn
+  , addColumn
+  , dropColumn
+  , sql
+  ) where
 
 import           Control.Applicative
 import           Data.Maybe
@@ -10,42 +18,7 @@ import qualified Data.Text                  as T
 import           Data.Tuple
 import           Database.PostgreSQL.Simple
 
--- NOTE(dbp 2014-10-18): step is a pair of up,down queries.
-data Migration v = Migration { migValue :: v, migSteps :: [(Text, Text)]}
-data ColumnSpec = ColumnSpec { colName        :: Text
-                             , colType        :: Text
-                             , colDefault     :: Maybe Text
-                             , colConstraints :: Maybe Text
-                             }
-
-
-data Direction = Up | Down
-
-run :: String -> Connection -> Direction -> Migration () -> IO ()
-run nm conn dir m =
-  do mapM_ (\p -> do let str = T.unpack $ pick dir p
-                     case str of
-                       "" -> return ()
-                       _ -> do execute_ conn (fromString str)
-                               putStrLn str)
-           (migSteps m)
-     case dir of
-       Up -> execute conn "INSERT INTO migrations (name) values (?)" (Only nm)
-       Down -> execute conn "DELETE FROM migrations WHERE name = ?" (Only nm)
-     return ()
-  where pick Up (sql,_) = sql
-        pick Down (_,sql) = sql
-
-instance Functor Migration where
-  fmap f m = m { migValue = f (migValue m) }
-
-instance Applicative Migration where
-  pure v = Migration v []
-  (<*>) (Migration f ss) (Migration v ss') = Migration (f v) (ss ++ ss')
-
-instance Monad Migration where
-  (>>=) (Migration v ss) f = let (Migration v' ss') = f v in Migration v' (ss ++ ss')
-  return v = Migration v []
+import           Rivet.Migration
 
 add :: (Text, Text) -> Migration ()
 add p = Migration () [p]
@@ -79,7 +52,7 @@ addColumn tab (ColumnSpec nm ty def constr) =
        "ALTER TABLE " <> tab <> " DROP COLUMN " <> nm)
 
 -- NOTE(dbp 2014-10-18): Like with 'dropTable', we have to specify
--- what tho column should look like when you re-add it in order to
+-- what the column should look like when you re-add it in order to
 -- build the inverse.
 dropColumn :: Text -> ColumnSpec -> Migration ()
 dropColumn tab = invert . addColumn tab
