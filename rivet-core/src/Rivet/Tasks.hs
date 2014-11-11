@@ -98,7 +98,7 @@ dbTest proj conf =
      void $ exec c
 
 test targets =
-  void (exec $ "cabal exec -- runghc -isrc spec/Main.hs -m \"" ++ (intercalate " " (tail targets) ++ "\""))
+  void (exec $ "cabal exec -- runghc -isrc -ispec spec/Main.hs -m \"" ++ (intercalate " " (tail targets) ++ "\""))
 
 dbCreate proj conf =
   do pass <- liftIO $ require conf (T.pack "database-password")

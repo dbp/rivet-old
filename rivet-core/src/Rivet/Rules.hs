@@ -17,7 +17,7 @@ addBinary proj =
   do let binary = "./.cabal-sandbox/bin/" ++ proj
      binary *> \_ -> do files <- getDirectoryFiles "" ["src/Main.hs", "*.cabal"]
                         need files
-                        cmd "cabal install -fdevelopment --reorder-goals --force-reinstalls"
+                        cmd "cabal install -j -fdevelopment --reorder-goals --force-reinstalls"
 
 addDependencies deps =
   do let depDirs = map ((++ ".d/.rivetclone") . ("deps/" ++) . T.unpack . head .
@@ -50,10 +50,6 @@ addDependencies deps =
               _ -> addSource depdir)
         deps)
      "deps" ~> need depDirs
-     "deps/dbp/migrate.d/.cabal-sandbox/bin/migrate" *> \_ ->
-          do need ["deps/dbp/migrate.d/.rivetclone"]
-             () <- cmd (Cwd "deps/dbp/migrate.d") "cabal sandbox init"
-             cmd (Cwd "deps/dbp/migrate.d") "cabal install"
   where readFileOrBlank nm = do e <- doesFileExist nm
                                 if e
                                    then liftIO $ readFile nm
