@@ -12,11 +12,6 @@ import           Database.PostgreSQL.Simple
 
 -- NOTE(dbp 2014-10-18): step is a pair of up,down queries.
 data Migration v = Migration { migValue :: v, migSteps :: [(Text, Text)]}
-data ColumnSpec = ColumnSpec { colName        :: Text
-                             , colType        :: Text
-                             , colDefault     :: Maybe Text
-                             , colConstraints :: Maybe Text
-                             }
 
 
 data Direction = Up | Down

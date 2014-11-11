@@ -7,6 +7,7 @@ module Rivet.Migration.V0 (
   , addColumn
   , dropColumn
   , sql
+  , ColumnSpec(..)
   ) where
 
 import           Control.Applicative
@@ -19,6 +20,12 @@ import           Data.Tuple
 import           Database.PostgreSQL.Simple
 
 import           Rivet.Migration
+
+data ColumnSpec = ColumnSpec { colName        :: Text
+                             , colType        :: Text
+                             , colDefault     :: Maybe Text
+                             , colConstraints :: Maybe Text
+                             }
 
 add :: (Text, Text) -> Migration ()
 add p = Migration () [p]
