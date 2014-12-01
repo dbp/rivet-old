@@ -171,7 +171,7 @@ migrate proj conf env mode =
                       then putStrLn "No migrations to run." >> return False
                       else do putStrLn $ "Writing migration script to " ++ main ++ "..."
                               writeFile main $
-                                "import Database.PostgreSQL.Simple\nimport Rivet.Migration.V0\n" ++
+                                "import Database.PostgreSQL.Simple\nimport Rivet.Migration\n" ++
                                 (unlines $ map createImport missing) ++
                                 "\nmain = do\n" ++
                                 (formatconnect dbhost dbport dbuser dbpass dbname) ++

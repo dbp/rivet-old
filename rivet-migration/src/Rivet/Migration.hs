@@ -23,13 +23,15 @@ run nm conn dir m =
                        "" -> return ()
                        _ -> do execute_ conn (fromString str)
                                putStrLn str)
-           (migSteps m)
+           (mreverse dir $ migSteps m)
      case dir of
        Up -> execute conn "INSERT INTO migrations (name) values (?)" (Only nm)
        Down -> execute conn "DELETE FROM migrations WHERE name = ?" (Only nm)
      return ()
   where pick Up (sql,_) = sql
         pick Down (_,sql) = sql
+        mreverse Up = id
+        mreverse Down = reverse
 
 instance Functor Migration where
   fmap f m = m { migValue = f (migValue m) }
