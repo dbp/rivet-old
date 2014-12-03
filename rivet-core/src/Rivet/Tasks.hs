@@ -289,7 +289,7 @@ repl = void (exec "cabal repl")
 setup = do need ["cabal.sandbox.config"]
            need ["deps"]
            exec "cabal install -fdevelopment --only-dependencies --enable-tests --reorder-goals --force-reinstalls"
-           exec "cabal exec -- ghc-pkg expose hspec2"
+           exec "cabal exec -- ghc-pkg expose hspec"
            exec "cabal exec -- ghc-pkg expose hspec-snap"
            void $ exec "cabal exec -- ghc-pkg hide resource-pool"
 
