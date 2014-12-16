@@ -106,7 +106,7 @@ dbCreate proj conf =
      let dbname = dbIfy proj
      code <- exec $ "PGPASSWORD=" ++ pass ++ " psql -hlocalhost -U" ++ user ++ " template1 -c 'SELECT 1'"
      isSuper <- case code of
-                  ExitFailure _ -> do void $ exec $ "sudo -u postgres psql template1 -c \"CREATE USER " ++ user ++ " WITH SUPERUSER PASSWORD '" ++ pass ++ "'\""
+                  ExitFailure _ -> do void $ exec $ "psql template1 -c \"CREATE USER " ++ user ++ " WITH SUPERUSER PASSWORD '" ++ pass ++ "'\""
                                       return True
                   ExitSuccess -> do res <- readExec $ "psql -hlocalhost -U" ++ user ++ " template1 -c \"SELECT current_setting('is_superuser')\""
                                     return ("on" `isInfixOf` res)
@@ -114,10 +114,10 @@ dbCreate proj conf =
         then do exec $ "PGPASSWORD=" ++ pass ++ " psql -hlocalhost -U" ++ user ++ " template1 -c \"CREATE DATABASE " ++ dbname ++ "_devel\""
                 exec $ "PGPASSWORD=" ++ pass ++ " psql -hlocalhost -U" ++ user ++ " template1 -c \"CREATE DATABASE " ++ dbname ++ "_test\""
                 return ()
-        else do void $ exec $ "sudo -u postgres psql template1 -c \"CREATE DATABASE " ++ dbname ++ "_devel\""
-                void $ exec $ "sudo -u postgres psql template1 -c \"CREATE DATABASE " ++ dbname ++ "_test\""
-                void $ exec $ "sudo -u postgres psql template1 -c \"GRANT ALL ON DATABASE " ++ dbname ++ "_devel TO " ++ user ++ "\""
-                void $ exec $ "sudo -u postgres psql template1 -c \"GRANT ALL ON DATABASE " ++ dbname ++ "_test TO " ++ user ++ "\""
+        else do void $ exec $ "psql template1 -c \"CREATE DATABASE " ++ dbname ++ "_devel\""
+                void $ exec $ "psql template1 -c \"CREATE DATABASE " ++ dbname ++ "_test\""
+                void $ exec $ "psql template1 -c \"GRANT ALL ON DATABASE " ++ dbname ++ "_devel TO " ++ user ++ "\""
+                void $ exec $ "psql template1 -c \"GRANT ALL ON DATABASE " ++ dbname ++ "_test TO " ++ user ++ "\""
 
 dbNew targets =
   do let name = head (tail targets)
