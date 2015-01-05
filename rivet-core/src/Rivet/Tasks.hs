@@ -97,8 +97,8 @@ dbTest proj conf =
              ++ "_test -U" ++ user ++ " -hlocalhost" ++ " -p " ++ show port
      void $ exec c
 
-test targets =
-  void (exec $ "cabal exec -- runghc -isrc -ispec spec/Main.hs -m \"" ++ (intercalate " " (tail targets) ++ "\""))
+test cabal targets =
+  void (exec $ cabal ++ " exec -- runghc -isrc -ispec spec/Main.hs -m \"" ++ (intercalate " " (tail targets) ++ "\""))
 
 dbCreate proj conf =
   do pass <- liftIO $ require conf (T.pack "database-password")
@@ -137,21 +137,21 @@ genMigration name content =
 
 data MigrateMode = Up | Down | Status deriving Show
 
-dbMigrate proj conf [] =
-  do liftIO $ migrate proj conf "devel" Up
-     liftIO $ migrate proj conf "test" Up
-dbMigrate proj conf (env:_) = liftIO $ migrate proj conf env Up
+dbMigrate cabal proj conf [] =
+  do liftIO $ migrate cabal proj conf "devel" Up
+     liftIO $ migrate cabal proj conf "test" Up
+dbMigrate cabal proj conf (env:_) = liftIO $ migrate cabal proj conf env Up
 
-dbMigrateDown proj conf [] =
-  do liftIO $ migrate proj conf "devel" Down
-     liftIO $ migrate proj conf "test" Down
-dbMigrateDown proj conf (env:_) = liftIO $ migrate proj conf env Down
+dbMigrateDown cabal proj conf [] =
+  do liftIO $ migrate cabal proj conf "devel" Down
+     liftIO $ migrate cabal proj conf "test" Down
+dbMigrateDown cabal proj conf (env:_) = liftIO $ migrate cabal proj conf env Down
 
-dbStatus proj conf [] = do liftIO $ migrate proj conf "devel" Status
-                           liftIO $ migrate proj conf "test" Status
-dbStatus proj conf (env:_) = liftIO $ migrate proj conf env Status
+dbStatus cabal proj conf [] = do liftIO $ migrate cabal proj conf "devel" Status
+                                 liftIO $ migrate cabal proj conf "test" Status
+dbStatus cabal proj conf (env:_) = liftIO $ migrate cabal proj conf env Status
 
-migrate proj conf env mode =
+migrate cabal proj conf env mode =
   do dbuser <- lookupDefault (dbIfy proj ++ "_user") conf "database-user"
      dbpass <- require conf "database-password"
      dbhost <- lookupDefault "127.0.0.1" conf "database-host"
@@ -195,7 +195,7 @@ migrate proj conf env mode =
                                  migrations
                            return False
      when run $ do putStrLn $ "Running " ++ main ++ "..."
-                   system $ "cabal exec -- runghc -isrc -imigrations " ++ main
+                   system $ cabal ++ " exec -- runghc -isrc -imigrations " ++ main
                    putStrLn $ "Cleaning up... "
                    removeFile main
   where stripSuffix = reverse . drop 3 . reverse
@@ -284,14 +284,14 @@ modelNew proj (_:nm:fields') =
         migr = "createTable \"" ++ lnm ++ "s\" [" ++ T.unpack colspecs ++ "]"
 
 
-repl = void (exec "cabal repl")
+repl cabal = void (exec $ cabal ++ " repl")
 
-setup = do need ["cabal.sandbox.config"]
-           need ["deps"]
-           exec "cabal install -fdevelopment --only-dependencies --enable-tests --reorder-goals --force-reinstalls"
-           exec "cabal exec -- ghc-pkg expose hspec"
-           exec "cabal exec -- ghc-pkg expose hspec-snap"
-           void $ exec "cabal exec -- ghc-pkg hide resource-pool"
+setup cabal = do need ["cabal.sandbox.config"]
+                 need ["deps"]
+                 exec $ cabal ++ " install -fdevelopment --only-dependencies --enable-tests --reorder-goals --force-reinstalls"
+                 exec $ cabal ++ " exec -- ghc-pkg expose hspec"
+                 exec $ cabal ++ " exec -- ghc-pkg expose hspec-snap"
+                 void $ exec $ cabal ++ " exec -- ghc-pkg hide resource-pool"
 
 cryptEdit proj =
   do e <- doesFileExist ".rivetcrypt"

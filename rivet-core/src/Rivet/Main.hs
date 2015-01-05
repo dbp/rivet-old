@@ -50,6 +50,7 @@ mainWith tasks = do
                            filter (\(k,v) -> (T.pack "commands.") `T.isPrefixOf` k) .
                            M.toList) <$> getMap conf
               deps <- lookupDefault [] conf (T.pack "dependencies")
+              cabal <- lookupDefault "cabal " conf (T.pack "cabal-command")
               return $ Just $ do
                 case targets of
                   [] -> action $ liftIO $ putStrLn "Need a task. Run `rivet tasks` to see all tasks."
@@ -82,17 +83,17 @@ mainWith tasks = do
                 mapM_ (\t -> taskName t ~> taskBody t proj conf (tail targets)) tasks
                 "cabal.sandbox.config" *> \_ -> cmd "cabal sandbox init"
                 "run" ~> Tasks.run proj
-                "test" ~> Tasks.test targets
+                "test" ~> Tasks.test cabal targets
                 "db" ~> Tasks.db proj conf
                 "db:test" ~> Tasks.dbTest proj conf
                 "db:create" ~> Tasks.dbCreate proj conf
                 "db:new" ~> Tasks.dbNew targets
-                "db:migrate" ~> Tasks.dbMigrate proj conf (tail targets)
-                "db:migrate:down" ~> Tasks.dbMigrateDown proj conf (tail targets)
-                "db:status" ~> Tasks.dbStatus proj conf (tail targets)
+                "db:migrate" ~> Tasks.dbMigrate cabal proj conf (tail targets)
+                "db:migrate:down" ~> Tasks.dbMigrateDown cabal proj conf (tail targets)
+                "db:status" ~> Tasks.dbStatus cabal proj conf (tail targets)
                 "model:new" ~> Tasks.modelNew proj targets
-                "repl" ~> Tasks.repl
-                "setup" ~> Tasks.setup
+                "repl" ~> Tasks.repl cabal
+                "setup" ~> Tasks.setup cabal
                 "crypt:edit" ~> Tasks.cryptEdit proj
                 "crypt:show" ~> Tasks.cryptShow
                 "crypt:setpass" ~> Tasks.cryptSetPass proj
