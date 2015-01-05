@@ -13,13 +13,13 @@ addCommands commands =
   sequence_ (map (\(cName, cCom) -> (T.unpack cName) ~> void (exec (T.unpack cCom)))
                  commands)
 
-addBinary proj =
+addBinary cabal proj =
   do let binary = ".cabal-sandbox/bin/" ++ proj
      binary *> \_ -> do files <- getDirectoryFiles "" ["src/Main.hs", "*.cabal"]
                         need files
-                        cmd "cabal install -j -fdevelopment --reorder-goals --force-reinstalls"
+                        cmd $ cabal ++ " install -j -fdevelopment --reorder-goals --force-reinstalls"
 
-addDependencies deps =
+addDependencies cabal deps =
   do let depDirs = map ((++ ".d/.rivetclone") . ("deps/" ++) . T.unpack . head .
                         T.splitOn (T.pack ":") . head . T.splitOn (T.pack "+")) deps
      sequence_ (map (\d ->
@@ -35,11 +35,11 @@ addDependencies deps =
               (branch:_) -> cmd (Cwd depdir) ("git checkout " ++ (T.unpack branch))
               _ -> return ()
             let addSource s = do contents <- readFileOrBlank "deps/add-all"
-                                 let addstr = "cabal sandbox add-source " ++ s
+                                 let addstr = cabal ++ " sandbox add-source " ++ s
                                  if addstr `isInfixOf` contents
                                     then return ()
                                     else liftIO $ appendFile "deps/add-all" (addstr ++ "\n")
-                                 let remstr = "cabal sandbox delete-source " ++ s
+                                 let remstr = cabal ++ " sandbox delete-source " ++ s
                                  if remstr `isInfixOf` contents
                                     then return ()
                                     else liftIO $ appendFile "deps/delete-all" (remstr ++ "\n")

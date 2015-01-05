@@ -78,8 +78,8 @@ mainWith tasks = do
                              tasks
                        when (not (target `elem` (map taskName tasks))) $ want targets
                 Rules.addCommands commands
-                Rules.addDependencies deps
-                Rules.addBinary proj
+                Rules.addDependencies cabal deps
+                Rules.addBinary cabal proj
                 mapM_ (\t -> taskName t ~> taskBody t proj conf (tail targets)) tasks
                 "cabal.sandbox.config" *> \_ -> cmd "cabal sandbox init"
                 "run" ~> Tasks.run proj
