@@ -98,7 +98,10 @@ dbTest proj conf =
      void $ exec c
 
 test cabal targets =
-  void (exec $ cabal ++ " exec -- runghc -isrc -ispec spec/Main.hs -m \"" ++ (intercalate " " (tail targets) ++ "\""))
+  do code <- exec $ cabal ++ " exec -- runghc -isrc -ispec spec/Main.hs -m \"" ++ (intercalate " " (tail targets) ++ "\"")
+     case code of
+       ExitSuccess -> return ()
+       _ -> error "rivet test: Test Failure."
 
 dbCreate proj conf =
   do pass <- liftIO $ require conf (T.pack "database-password")
