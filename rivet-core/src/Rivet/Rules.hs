@@ -2,7 +2,7 @@ module Rivet.Rules where
 
 import           Prelude           hiding ((++))
 
-import           Control.Monad     (void)
+import           Control.Monad     (void, when)
 import           Data.List         (isInfixOf)
 import qualified Data.Text         as T
 import           Development.Shake
@@ -43,7 +43,19 @@ addDependencies cabal deps =
                                  if remstr `isInfixOf` contents
                                     then return ()
                                     else liftIO $ appendFile "deps/delete-all" (remstr ++ "\n")
-                                 cmd addstr :: Action ()
+                                 -- NOTE(dbp 2015-01-06): This is an imperfect test, but one that is
+                                 -- easy to mock up, if your sandbox is structured differently.
+                                 hasSandbox <- doesFileExist "cabal.sandbox.config"
+                                 if hasSandbox
+                                    then cmd addstr :: Action ()
+                                    else return ()
+                                 hasHalcyon <- doesDirectoryExist ".halcyon"
+                                 when hasHalcyon $
+                                   do contents <- readFileOrBlank ".halcyon/sandbox-sources"
+                                      if s `isInfixOf` contents
+                                         then return ()
+                                         else liftIO $ appendFile ".halcyon/sandbox-sources" (s ++ "\n")
+
             case rest of
               (subdirs:_) -> mapM_ (\subdir -> addSource (depdir ++ "/" ++ (T.unpack subdir)))
                                    (T.splitOn (T.pack ",") subdirs)
