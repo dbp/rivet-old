@@ -1,0 +1,17 @@
+dependencies:
+  pre:
+    - git clone https://github.com/mietek/bashmenot.git $HOME/bashmenot
+  override:
+    - source $HOME/bashmenot/src.sh && cd rivet && HALCYON_PREFIX=/tmp halcyon install .:
+        timeout: 600
+    
+test:
+  override:
+    - echo 0
+
+deployment:
+  master:
+    branch: master
+    commands:
+      - cd /tmp/bin && tar cvzf rivet-ubuntu.gz rivet
+      - source $HOME/bashmenot/src.sh && s3_upload rivet-ubuntu.gz s3.dbp.io rivet-ubuntu.gz public

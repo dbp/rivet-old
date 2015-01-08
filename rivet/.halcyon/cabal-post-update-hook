@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+# NOTE(dbp 2015-01-05): CircleCI seems to tell cabal that it has the
+# number of physical CPUs on the server, not the number that are
+# allowed by a build. Which causes massive slowdown. So we hardcode
+# cabal to only use 2 (what we're allowed).
+
+sed 's/jobs:.*/jobs: 2/' "${HALCYON_BASE}/cabal/.halcyon-cabal.config" > /tmp/config && mv /tmp/config "${HALCYON_BASE}/cabal/.halcyon-cabal.config"

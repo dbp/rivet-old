@@ -28,7 +28,7 @@ addDependencies cabal deps =
           let depdir = ("deps/" ++ (T.unpack repo) ++ ".d")
           depdir ++ "/.rivetclone" *> \clonedFile -> do
             liftIO $ removeFiles depdir ["//*"]
-            () <- cmd ("git clone https://github.com/"
+            () <- cmd ("git clone --depth=1 https://github.com/"
                        ++ (T.unpack repo) ++ " " ++ depdir)
             writeFile' clonedFile ""
             case branchspec of
