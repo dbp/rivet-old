@@ -17,5 +17,5 @@ deployment:
   master:
     branch: master
     commands:
-      - cd /tmp/bin && tar cvzf rivet-ubuntu.gz rivet
-      - source $HOME/halcyon/lib/bashmenot/src.sh && s3_upload rivet-ubuntu.gz s3.dbp.io rivet-ubuntu.gz public
+      - cd /tmp/bin && tar cvzf /tmp/rivet-ubuntu.gz rivet
+      - source $HOME/halcyon/lib/bashmenot/src.sh && s3_upload /tmp/rivet-ubuntu.gz s3.dbp.io rivet-ubuntu.gz public
