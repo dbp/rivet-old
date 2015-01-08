@@ -28,12 +28,13 @@ addDependencies cabal deps =
           let depdir = ("deps/" ++ (T.unpack repo) ++ ".d")
           depdir ++ "/.rivetclone" *> \clonedFile -> do
             liftIO $ removeFiles depdir ["//*"]
-            () <- cmd ("git clone --depth=1 https://github.com/"
-                       ++ (T.unpack repo) ++ " " ++ depdir)
+            () <- case branchspec of
+                    (branch:_) -> cmd ("git clone --depth=1 -b " ++ (T.unpack branch) ++
+                                       " https://github.com/" ++ (T.unpack repo) ++ " " ++
+                                       depdir)
+                    _ -> cmd ("git clone --depth=1 https://github.com/"
+                                    ++ (T.unpack repo) ++ " " ++ depdir)
             writeFile' clonedFile ""
-            case branchspec of
-              (branch:_) -> cmd (Cwd depdir) ("git checkout " ++ (T.unpack branch))
-              _ -> return ()
             let addSource s = do contents <- readFileOrBlank "deps/add-all"
                                  let addstr = cabal ++ " sandbox add-source " ++ s
                                  if addstr `isInfixOf` contents
