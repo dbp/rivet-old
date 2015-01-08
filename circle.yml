@@ -5,7 +5,7 @@ dependencies:
     - mv rivet-simple-deploy rivet
     - mv rivet-migration rivet
   override:
-    - source <( $HOME/halcyon/halcyon paths ) && cd rivet && HALCYON_PREFIX=/tmp halcyon install .:
+    - source <( $HOME/halcyon/halcyon paths ) && HALCYON_PREFIX=/tmp halcyon install rivet:
         timeout: 600
     
 test:
