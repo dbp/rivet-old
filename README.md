@@ -81,13 +81,13 @@ names that match `projname_prod_` (they can have arbitrary prefixes and
 suffixes, and will need to, or else naming conflicts will happen).
 
 Rivet also expects that you have CI set up so that staging is
-automatically built and deployed. The only `deploy` actions that we
-have are migrating the database and rolling what is on staging out to
-production. The two are assumed to be based on the same docker image
-(though will often be running different versions of it, of
-course). Finally, we expect that staging and production are connected
-to the same database, as our `migrate` happens within the context of the
-staging host.
+automatically built and deployed. The `deploy` actions that we have
+are migrating the database, rolling what is on staging out to
+production, and rolling back to specific revisions on either. The two
+are assumed to be based on the same docker image (though will often be
+running different versions of it, of course). Finally, we expect that
+staging and production are connected to the same database, as our
+`migrate` happens within the context of the staging host.
 
 [NOTE(dbp 2014-10-01): There are more details yet to be documented about deployment.]
 
@@ -111,14 +111,6 @@ The current list of supported tasks are:
 `run` - build and run the development version of the application. Only
     rebuilds if `Main.hs` file in `src/` or the `.cabal` file has changed.
 
-`run:docker` - builds and runs the application using Docker in development
-    mode, so it automatically recompiles/reloads on the fly. You should only
-    need to re-run this if you change the .cabal file. (Note, though, that
-    due to the way docker caches things, if you change files in `src` and rerun
-    this, it will recompile the application, though no dependencies). Also, currently the
-    boot2docker setup for macosx can't support this, as we need to
-    mount volumes into the container (to persist data in the database).
-
 `test` - run tests.
 
 `test pattern` - run tests with name matching pattern.
@@ -138,18 +130,10 @@ The current list of supported tasks are:
 
 `db:status` - prints out the status of all migrations (whether they've been applied) locally.
 
-`db:status:docker` - Like db:status, but for docker development environment.
-
 `db:migrate` - Runs all pending migrations against devel and test databases. The migrations
     are run via the `migrate` utility (see `db:new`).
 
-`db:migrate:docker` - Runs migrations against devel/test databases in
-    docker development environment.
-
 `db:migrate:down` - Reverts the last migration (in development and test).
-
-`db:migrate:down:docker` - Reverts last migration in devel/test databases in
-    docker development environment.
 
 `deploy:status` - Queries what is currently running on the staging and production hosts.
 
@@ -164,12 +148,6 @@ The current list of supported tasks are:
 revision (short version), which must correspond to a built image,
 which anything that was ever running does.
 
-`crypt:setpass` - Set a password on an encrypted file (used for the
-    production config file). The password is stored it `.rivetpass`, which
-    if you don't have anything in `.rivetcrypt`, you can edit directly.
-
-`crypt:edit` - Edit the encrypted file (`.rivetcrypt`) with `$EDITOR`
-    (or `vi` if EDITOR isn't set). It is intended to be checked into
-    version control, and is used to put production configuration settings.
-
-`crypt:show` - Show current encrypted file contents.
+`deploy:stage SHA` - Rolls staging back to the specified git
+revision (short version), which must correspond to a built image,
+which anything that was ever running does.

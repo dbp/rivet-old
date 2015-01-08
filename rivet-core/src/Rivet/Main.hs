@@ -112,7 +112,4 @@ mainWith tasks = do
                                        ,"model:new ModelName"
                                        ,"repl"
                                        ,"setup"
-                                       ,"crypt:edit"
-                                       ,"crypt:show"
-                                       ,"crypt:setpass"
                                        ] ++ map taskName tasks)
