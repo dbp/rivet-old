@@ -91,7 +91,6 @@ mainWith tasks = do
                 "db:migrate" ~> Tasks.dbMigrate cabal proj conf (tail targets)
                 "db:migrate:down" ~> Tasks.dbMigrateDown cabal proj conf (tail targets)
                 "db:status" ~> Tasks.dbStatus cabal proj conf (tail targets)
-                "model:new" ~> Tasks.modelNew proj targets
                 "repl" ~> Tasks.repl cabal
                 "setup" ~> Tasks.setup cabal
                 "crypt:edit" ~> Tasks.cryptEdit proj

@@ -50,12 +50,6 @@ writeFile' f c = do putStrLn $ "writing " ++ f
 -- NOTE(dbp 2014-09-27): These calls load in files from disk using TH.
 loadProjectTemplate
 loadFile "migrationTemplate" "template/migration.hs"
-loadModelTemplate
-loadFile "modelNewHeist" "template/heist/new.tpl"
-loadFile "modelEditHeist" "template/heist/edit.tpl"
-loadFile "modelFormHeist" "template/heist/_form.tpl"
-loadFile "modelShowHeist" "template/heist/show.tpl"
-loadFile "modelIndexHeist" "template/heist/index.tpl"
 
 init projName = do liftIO $ do mapM createDirectory' (fst tDirTemplate)
                                mapM_ write (snd tDirTemplate)
@@ -218,73 +212,6 @@ migrate cabal proj conf env mode =
         formatconnect h p u ps nm = "  c <- connect (ConnectInfo " ++ w h ++ " " ++ show p ++ " " ++ w u ++ " " ++ w ps ++ " " ++ w nm ++ ")\n"
         w s = "\"" ++ s ++ "\""
 
-
-modelNew proj (_:nm:fields') =
-  do exec $ "mkdir -p src/" ++ nm
-     liftIO $ do mapM (createDirectory' . addPath) (fst tModelTemplate)
-                 mapM_ (uncurry writeFile' . (addPath *** (replace nm))) (snd tModelTemplate)
-     exec $ "mkdir -p templates/" ++ lnm
-     liftIO $ writeFile' ("templates" </> lnm </> "new.tpl") (replace nm modelNewHeist)
-     liftIO $ writeFile' ("templates" </> lnm </> "edit.tpl") (replace nm modelEditHeist)
-     liftIO $ writeFile' ("templates" </> lnm </> "_form.tpl") (replace nm modelFormHeist)
-     liftIO $ writeFile' ("templates" </> lnm </> "show.tpl") (replace nm modelShowHeist)
-     liftIO $ writeFile' ("templates" </> lnm </> "index.tpl") (replace nm modelIndexHeist)
-     liftIO $ genMigration ("add_" ++ lnm) migr
-     liftIO $ putStrLn $ "\nNOTE: While handlers have been created (with top level at " ++ nm ++ ".Handlers.top),\n \
-                         \they have not been added to the routes in src/Site.hs. You can put them anywhere,\n \
-                         \but some of the templates assume that the top handler will exist at /" ++ lnm ++ "."
-  where lnm = map toLower nm
-        addPath = (("src" </> nm) </>)
-        fields = map ((\(a:b:[]) -> (a,b)) . T.splitOn ":" . T.pack) fields'
-        num = length fields
-        mfields = unws $ map (\((nm,_),var) -> ", " ++ nm ++ " :: " ++ T.pack [var])
-                             (zip fields ['b'..])
-        mtypes_f = unws $ map (\(_,ty) -> "(f " ++ ty ++ ")") fields
-        mnewfields = unws $ map snd fields
-        mwires = unws $ map (\(nm,_) -> "(Wire \"" ++ nm ++ "\")") fields
-        umfields = unws $ map fst fields
-        mjusts = unws $ map (\(nm,_) -> "(Just " ++ nm ++ ")") fields
-        mform = T.intercalate " <*> " $ map (\(nm,ty) -> "\"" ++ nm ++ "\" .: " ++ mkform ty) fields
-        mkform "Text" = "text Nothing"
-        mkform ty = "stringRead \"Must be a(n) " ++ ty ++ "\" Nothing"
-        meditform = T.intercalate " <*> " $
-          map (\(nm,ty) -> "\"" ++ nm ++ "\" .: " ++ mkeditform nm ty) fields
-        mkeditform nm "Text" = "text (Just " ++ nm ++ ")"
-        mkeditform nm ty = "stringRead \"Must be a(n) " ++ ty ++ "\" (Just " ++ nm ++ ")"
-        msplices = T.intercalate "\n" $
-          map (\(nm,ty) -> "     \"" ++ nm ++ "\" ## textSplice " ++ mksplice nm ty) fields
-        mksplice nm "Text" = nm
-        mksplice nm ty = "$ tshow " ++ nm
-        mdffields = T.intercalate "\n\n" $ map (\(nm,ty) -> "  <dfLabel ref=\"" ++ nm ++ "\">" ++ nm ++ "</dfLabel>\n  <dfInputText ref=\"" ++ nm ++ "\"/>") fields
-        unws = T.intercalate " "
-        replace nm c = T.unpack .
-                       T.replace "mODEL" (T.toLower nm') .
-                       T.replace "MODEL" nm' .
-                       T.replace "MVARS" (T.pack $ intersperse ' ' $ take num ['b'..]) .
-                       T.replace "MFIELDS" mfields .
-                       T.replace "MTYPES_F" mtypes_f .
-                       T.replace "MNEWFIELDS" mnewfields .
-                       T.replace "MWIRES" mwires .
-                       T.replace "mFIELDS" umfields .
-                       T.replace "mJUSTS" mjusts .
-                       T.replace "MFORM" mform .
-                       T.replace "MEDITFORM" meditform .
-                       T.replace "MSPLICES" msplices .
-                       T.replace "MDFFIELDS" mdffields .
-                       T.pack $ c
-          where nm' = T.pack nm
-        colspecs = T.intercalate ", " $
-                   ("ColumnSpec \"id\" \"serial\" Nothing (Just \"PRIMARY KEY\")") :
-                   (map (\(fld, ty) -> "ColumnSpec \"" <> fld <> "\" \"" <>
-                                                  toSql ty <> "\" Nothing Nothing")
-                       fields)
-        toSql :: Text -> Text
-        toSql "Text" = "text"
-        toSql "Int" = "int"
-        toSql "Integer" = "bigint"
-        toSql "UTCTime" = "timestamptz"
-        toSql t = error $ "I don't know how to deal with columns of type " ++ T.unpack t ++ " yet."
-        migr = "createTable \"" ++ lnm ++ "s\" [" ++ T.unpack colspecs ++ "]"
 
 
 repl cabal = void (exec $ cabal ++ " repl")
