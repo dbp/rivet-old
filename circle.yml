@@ -8,10 +8,6 @@ dependencies:
   override:
     - source <( $HOME/halcyon/halcyon paths ) && cd rivet && HALCYON_PREFIX=/tmp halcyon install .:
         timeout: 600
-    
-test:
-  override:
-    - echo 0
 
 deployment:
   master:
