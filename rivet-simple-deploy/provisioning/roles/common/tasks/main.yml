@@ -1,0 +1,108 @@
+---
+
+- name: create host deploy user
+  user: name=host shell=/bin/bash home=/srv groups=docker
+
+- name: make sure host owns /srv
+  file: "dest=/srv mode=755 state=directory owner=host"
+
+- name: make sure host owns /srv/data (and it exists)
+  file: "dest=/srv/data mode=755 state=directory owner=host"
+
+- name: add local key to the authorized_keys for deployment
+  authorized_key: user=host key="{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+
+- name: install pcre
+  sudo: yes
+  apt: pkg=libpcre3-dev update_cache=yes
+
+
+# - name: install database creation library
+#   sudo: yes
+#   apt: pkg=python-psycopg2 update_cache=yes
+
+# - name: create production database
+#   sudo: yes
+#   sudo_user: postgres
+#   postgresql_db: name={{project_slug}}_prod
+
+# - name: ensure user has access to production database
+#   sudo: yes
+#   sudo_user: postgres
+#   postgresql_user: db={{project_slug}}_prod name={{project_slug}}_user password={{ production_db_password }} priv=ALL
+
+# - name: ensure user does not have unnecessary privilege
+#   sudo: yes
+#   sudo_user: postgres
+#   postgresql_user: name={{project_slug}}_user role_attr_flags=NOSUPERUSER,NOCREATEDB
+
+- name: allow host to run confd
+  lineinfile: "dest=/etc/sudoers state=present line='host ALL=NOPASSWD: /usr/local/bin/confd'"
+
+- name: add deploy key
+  copy:
+    content="{{ deploy_key }}"
+    dest="/srv/.ssh/id_rsa"
+    owner=host
+    group=host
+    mode=0600
+
+- name: clone source repository
+  git:
+    repo={{ source_repo }}
+    accept_hostkey=yes
+    key_file=/srv/.ssh/id_rsa
+    dest=/srv/{{project_slug}}
+  ignore_errors: true
+
+- name: make host own repository
+  file: path=/srv/{{project_slug}} state=directory owner=host recurse=yes
+
+- name: add deploy script
+  file:
+    src=deploy.sh
+    dest=/srv/deploy.sh
+    owner=host
+    group=host
+    mode=0755
+
+- name: add credentials
+  template:
+    src=docker_credentials.sh
+    dest=/srv/docker_credentials.sh
+    owner=host
+    group=host
+    mode=0755
+
+
+- name: create containers for etcd
+  command: etcdctl mkdir {{project_slug}}/{{env}}
+  ignore_errors: yes
+
+- name: install templates
+  copy: src=nginx.tmpl dest=/etc/confd/templates/nginx-{{project_slug}}-{{env}}.tmpl
+
+- name: do hostname in template
+  replace:
+    dest=/etc/confd/templates/nginx-{{project_slug}}-{{env}}.tmpl
+    regexp='HOSTNAME'
+    replace="{{server_domain}}"
+
+- name: do slug replacement in template
+  replace:
+    dest=/etc/confd/templates/nginx-{{project_slug}}-{{env}}.tmpl
+    regexp='PROJECTSLUG'
+    replace={{project_slug}}
+
+- name: do env replacement in template
+  replace:
+    dest=/etc/confd/templates/nginx-{{project_slug}}-{{env}}.tmpl
+    regexp='ENV'
+    replace={{env}}
+
+- name: install configuration
+  template: src=nginx.toml dest=/etc/confd/conf.d/nginx-{{project_slug}}-{{env}}.toml
+
+- name: ensure nginx server is restarted
+  service: name=nginx state=restarted enabled=yes
+  sudo: true

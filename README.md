@@ -61,6 +61,7 @@ deps/user/reponame/.rivetclone`.
 commands {
   foo = "bar"
   foo1 = "bar2"
+}
 ```
 
 Defines new commands `foo` and `foo1`, where `bar` and `bar2` are
@@ -75,10 +76,23 @@ have various ad-hoc Makefile commands).
 
 Rivet expects that your deployment setup is via Docker. Currently it
 exects there is a single staging host and a single production host
-(which could be the same host). It expects that the staging containers
-have names that match `projname_stage_` and production containers have
-names that match `projname_prod_` (they can have arbitrary prefixes and
-suffixes, and will need to, or else naming conflicts will happen).
+(which could be the same host). The deployment is configured via the `Rivetfile` as:
+
+```
+stage-host = "host@staging.server"
+prod-host = "host@prod.server"
+production-image = "dbp1/project_production"
+production-instances = 3
+```
+
+Where `production-instances` is the number of docker containers
+running in production, not the number of servers (right now, only 1
+server is supported).
+
+It expects that the staging containers have names that match
+`projname_stage_` and production containers have names that match
+`projname_prod_` (they can have arbitrary prefixes and suffixes, and
+will need to, or else naming conflicts will happen).
 
 Rivet also expects that you have CI set up so that staging is
 automatically built and deployed. The `deploy` actions that we have
@@ -89,7 +103,19 @@ running different versions of it, of course). Finally, we expect that
 staging and production are connected to the same database, as our
 `migrate` happens within the context of the staging host.
 
-[NOTE(dbp 2014-10-01): There are more details yet to be documented about deployment.]
+The rollout and rollback expect that the following command will cause
+a single instance of a specific revision (for which there is a docker image
+`production_image:tag`) to be run in staging:
+
+`ssh stage-host /srv/deploy.sh projname stage production-image tag 1`
+
+And similarly, for production:
+
+`ssh stage-host /srv/deploy.sh projname stage production-image tag production-instances`
+
+You can see a sample deploy script in the `provisioning` directory of
+`rivet-simple-deploy` (the particular path is
+`provisioning/roles/common/templates/deploy.sh`).
 
 ## Tasks
 
@@ -126,12 +152,12 @@ The current list of supported tasks are:
     on how you have sudo set up).
 
 `db:new name_of_migration` - create a new migration in the `migrations` directory, using
-    the `migrate` utility (unreleased, on github at dbp/migrate)
+    the `rivet-migration` library (see: Migrations).
 
 `db:status` - prints out the status of all migrations (whether they've been applied) locally.
 
 `db:migrate` - Runs all pending migrations against devel and test databases. The migrations
-    are run via the `migrate` utility (see `db:new`).
+    are run with `rivet-migration` (see: Migrations).
 
 `db:migrate:down` - Reverts the last migration (in development and test).
 

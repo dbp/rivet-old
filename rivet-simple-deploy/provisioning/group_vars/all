@@ -1,0 +1,5 @@
+---
+# file: group_vars/all
+
+source_repo: git@github.com:user/project.git
+project_slug: project

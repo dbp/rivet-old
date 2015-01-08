@@ -1,0 +1,15 @@
+---
+
+- name: install redis
+  sudo: yes
+  apt:  "pkg=redis-server update_cache=yes" 
+
+- name: get redis to listen on socket
+  lineinfile:
+    dest=/etc/redis/redis.conf
+    regexp='^# unixsocket'
+    line="unixsocket = /var/run/redis/redis.sock"
+  lineinfile:
+    dest=/etc/redis/redis.conf
+    regexp='^# unixsocketperm'
+    line="unixsocketperm = 777"

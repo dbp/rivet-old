@@ -1,0 +1,16 @@
+[web:children]
+stage
+prod
+
+[prod]
+prod.server.com ansible_ssh_user=root
+[stage]
+stage.server.com ansible_ssh_user=root
+
+[prod:vars]
+env=prod
+server_domain="prod.server.com other.server.com"
+
+[stage:vars]
+env=stage
+server_domain=stage.server.com

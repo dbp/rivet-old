@@ -1,0 +1,19 @@
+---
+- hosts: stage
+  gather_facts: yes
+
+  sudo: no
+
+  vars_files:
+    - secrets.yml
+
+  vars:
+    user: host
+
+  roles:
+    - angstwad.docker_ubuntu
+    - redis
+    - nginx
+    - confd
+    - common
+    - ssl

@@ -1,0 +1,18 @@
+---
+
+- name: install postgresql
+  sudo: yes
+  apt:  "pkg={{ item }} update_cache=yes"
+  with_items: postgresql_packages
+
+- name: allow password authentication over socket
+  copy:
+    src=pg_hba.conf
+    dest="/etc/postgresql/9.3/main/pg_hba.conf"
+    owner=postgres
+    group=postgres
+    mode=0640
+
+- name: ensure postgresql server is started
+  service: name=postgresql state=restarted enabled=yes
+  sudo: true

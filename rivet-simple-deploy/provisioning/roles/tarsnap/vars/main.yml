@@ -1,0 +1,4 @@
+---
+tarsnap_version: 1.0.35
+base_dir: /srv/backup
+install_user: root

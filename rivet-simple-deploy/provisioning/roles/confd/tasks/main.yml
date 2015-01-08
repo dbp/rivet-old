@@ -1,0 +1,43 @@
+---
+
+- name: install pip
+  apt: pkg=python-pip update_cache=yes
+
+- name: install docker-py
+  command: pip install docker-py
+
+
+- name: install etcd
+  docker:
+    image=coreos/etcd
+    ports=4001:4001,7001:7001
+
+- name: install confd
+  get_url:
+    url: https://github.com/kelseyhightower/confd/releases/download/v0.5.0/confd-0.5.0-linux-amd64
+    dest: /usr/local/bin/confd
+
+- name: make confd executable
+  file: path=/usr/local/bin/confd mode=0755
+
+- name: create confd/conf.d directory
+  file:
+    state=directory
+    path=/etc/confd/conf.d
+
+- name: create confd/templates directory
+  file:
+    state=directory
+    path=/etc/confd/templates
+
+- name: get etcdctl
+  get_url: url=https://github.com/coreos/etcd/releases/download/v0.4.6/etcd-v0.4.6-linux-amd64.tar.gz dest=/tmp/etcd.tar.gz
+
+- name: Extract etcd
+  command: chdir=/tmp
+           tar xzf etcd.tar.gz
+
+- name: Move etcdctl to /usr/bin
+  command: cp /tmp/etcd-v0.4.6-linux-amd64/{{ item }} /usr/bin/{{ item }}
+  with_items:
+    - etcdctl
