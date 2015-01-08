@@ -1,3 +1,7 @@
+machine:
+  environment:
+    HALCYON_BASE: /var/tmp/halcyon
+
 dependencies:
   pre:
     - git clone https://github.com/mietek/halcyon.git $HOME/halcyon
@@ -17,4 +21,4 @@ deployment:
     branch: master
     commands:
       - cd /tmp/bin && tar cvjf /tmp/rivet-ubuntu.bz2 rivet
-      - source $HOME/halcyon/lib/bashmenot/src.sh && s3_upload /tmp/rivet-ubuntu.bz2 s3.dbp.io rivet-ubuntu.bz2 public-read
+      - source $HOME/halcyon/lib/bashmenot/src.sh && s3_upload /tmp/rivet-ubuntu.bz2 $HALCYON_S3_BUCKET rivet-ubuntu.bz2 public-read
