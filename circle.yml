@@ -1,6 +1,8 @@
 machine:
   environment:
     HALCYON_BASE: /var/tmp/halcyon
+    BASHMENOT_AWS_SECRET_ACCESS_KEY: $HALCYON_AWS_SECRET_ACCESS_KEY
+    BASHMENOT_AWS_ACCESS_KEY_ID: $HALCYON_AWS_ACCESS_KEY_ID
 
 dependencies:
   pre:
