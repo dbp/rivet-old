@@ -9,7 +9,7 @@ dependencies:
     - mv rivet-simple-deploy rivet
     - mv rivet-migration rivet
   override:
-    - source <( $HOME/halcyon/halcyon paths ) && HALCYON_PREFIX=/tmp halcyon install rivet:
+    - source <( $HOME/halcyon/halcyon paths ) && HALCYON_PREFIX=$HOME halcyon install rivet:
         timeout: 600
     
 test:
@@ -20,5 +20,5 @@ deployment:
   master:
     branch: master
     commands:
-      - cd /tmp/bin && tar cvjf /tmp/rivet-ubuntu.bz2 rivet
+      - cd $HOME/bin && tar cvjf /tmp/rivet-ubuntu.bz2 rivet
       - source $HOME/halcyon/lib/bashmenot/src.sh && BASHMENOT_AWS_SECRET_ACCESS_KEY=$HALCYON_AWS_SECRET_ACCESS_KEY BASHMENOT_AWS_ACCESS_KEY_ID=$HALCYON_AWS_ACCESS_KEY_ID s3_upload /tmp/rivet-ubuntu.bz2 $HALCYON_S3_BUCKET rivet-ubuntu.bz2 public-read
