@@ -1,6 +1,10 @@
 dependencies:
   pre:
     - git clone https://github.com/mietek/halcyon.git $HOME/halcyon
+    - mv rivet-core rivet
+    - mv rivet-simple-deploy rivet
+    - mv rivet-docker rivet
+    - mv rivet-migration rivet
   override:
     - source <( $HOME/halcyon/halcyon paths ) && cd rivet && HALCYON_PREFIX=/tmp halcyon install .:
         timeout: 600
