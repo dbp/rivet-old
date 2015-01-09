@@ -9,7 +9,9 @@ dependencies:
     - mv rivet-simple-deploy rivet
     - mv rivet-migration rivet
   override:
-    - source <( $HOME/halcyon/halcyon paths ) && HALCYON_PREFIX=$HOME halcyon install rivet:
+    # NOTE(dbp 2015-01-08): Need to rebuild sandbox from scratch, or do another workaround,
+    # or else we won't have rivet-core, rivet-simple-deploy, or rivet-migration updated.
+    - source <( $HOME/halcyon/halcyon paths ) && HALCYON_PREFIX=$HOME halcyon install --sandbox-rebuild rivet:
         timeout: 600
     
 test:
