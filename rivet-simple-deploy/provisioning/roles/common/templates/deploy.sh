@@ -76,8 +76,13 @@ echo "------> Shutting down old containers..."
 for i in ${OLDPORTS[@]}
 do
     echo "        Stopping container $i..."
-    unset OLDUPSTREAM["/${REPO}/${ENV}/upstream/$i"]
-    etcdctl rm /${REPO}/${ENV}/upstream/$i > /dev/null
+    if [ ${OLDUPSTREAM["/${REPO}/${ENV}/upstream/$i"]+_} ]
+    then
+        unset OLDUPSTREAM["/${REPO}/${ENV}/upstream/$i"]
+    fi
+    # NOTE(dbp 2015-01-08): If a container is running that isn't in etcd,
+    # we just want it killed, so we don't care if this rm fails.
+    etcdctl rm /${REPO}/${ENV}/upstream/$i || true &> /dev/null
     sudo /usr/local/bin/confd -onetime -quiet
     sleep 5
     docker kill $i > /dev/null
