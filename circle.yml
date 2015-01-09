@@ -1,6 +1,6 @@
 machine:
   environment:
-    HALCYON_BASE: /var/tmp/halcyon
+    HALCYON_BASE: /tmp/halcyon
 
 dependencies:
   pre:
