@@ -1,5 +1,7 @@
 module Rivet.Main where
 
+import           Prelude                 hiding ((*>), (++))
+
 import           Control.Applicative     ((<$>))
 import           Control.Monad           (void, when)
 import           Data.Char               (isSpace)
@@ -12,7 +14,6 @@ import qualified Data.Text               as T
 import           Data.Time.Clock
 import           Data.Time.Format
 import           Development.Shake       hiding (doesFileExist)
-import           Prelude                 hiding ((++))
 import           System.Directory        (createDirectoryIfMissing,
                                           doesFileExist, getCurrentDirectory)
 import           System.Exit

@@ -1,6 +1,6 @@
 module Rivet.Rules where
 
-import           Prelude           hiding ((++))
+import           Prelude           hiding ((*>), (++))
 
 import           Control.Monad     (void, when)
 import           Data.List         (isInfixOf)
@@ -14,7 +14,7 @@ addCommands commands =
                  commands)
 
 addBinary cabal proj =
-  do let binary = ".cabal-sandbox/bin/" ++ proj
+  do let binary = "./.cabal-sandbox/bin/" ++ proj
      binary *> \_ -> do files <- getDirectoryFiles "" ["src/Main.hs", "*.cabal"]
                         need files
                         cmd $ cabal ++ " install -j -fdevelopment --reorder-goals --force-reinstalls"

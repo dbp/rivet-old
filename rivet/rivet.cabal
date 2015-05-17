@@ -1,6 +1,6 @@
 name:                rivet
 version:             0.1.0.0
--- synopsis:
+synopsis: A project management tool for Haskell applications.
 -- description:
 homepage:            https://github.com/dbp/rivet
 license:             BSD3
@@ -17,5 +17,5 @@ executable rivet
   main-is:             src/Main.hs
   build-depends:       base >=4.7 && <5
                      , rivet-core >= 0.1.0.0
-                     , rivet-simple-deploy >= 0.1.0.0 
+                     , rivet-simple-deploy >= 0.1.0.0
   default-language:    Haskell2010

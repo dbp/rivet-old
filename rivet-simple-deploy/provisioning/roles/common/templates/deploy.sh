@@ -82,7 +82,7 @@ do
     fi
     # NOTE(dbp 2015-01-08): If a container is running that isn't in etcd,
     # we just want it killed, so we don't care if this rm fails.
-    etcdctl rm /${REPO}/${ENV}/upstream/$i || true &> /dev/null
+    (etcdctl rm /${REPO}/${ENV}/upstream/$i || true) &> /dev/null
     sudo /usr/local/bin/confd -onetime -quiet
     sleep 5
     docker kill $i > /dev/null

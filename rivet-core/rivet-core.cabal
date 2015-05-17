@@ -3,7 +3,7 @@
 
 name:                rivet-core
 version:             0.1.0.0
--- synopsis:
+synopsis: Core library for project management tool.
 -- description:
 homepage:            https://github.com/dbp/rivet
 license:             BSD3
@@ -30,8 +30,7 @@ library
                      , configurator >= 0.3.0.0
                      , text
                      , process
-                     , time >= 1.4 && < 1.5
-                     , old-locale
+                     , time >= 1.5 && < 1.6
                      , unordered-containers
                      , template-haskell
                      , directory

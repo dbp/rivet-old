@@ -1,6 +1,6 @@
 name:                rivet-simple-deploy
 version:             0.1.0.0
--- synopsis:
+synopsis: Basic deployment support for project management tool.
 -- description:
 homepage:            https://github.com/dbp/rivet
 license:             BSD3

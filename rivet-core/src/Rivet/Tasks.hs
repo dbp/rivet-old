@@ -36,7 +36,6 @@ import           System.Exit
 import           System.Exit
 import           System.FilePath
 import           System.IO
-import           System.Locale              (defaultTimeLocale)
 import           System.Process
 
 import           Rivet.Common
